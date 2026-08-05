@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Asset Register - MaintainX</title>
+    
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-primary);
+        margin: 0;
+        font-family: 'Outfit', sans-serif;
+      }
+      .dashboard-layout {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+      .main-content {
+        flex: 1;
+        padding: 0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: var(--bg-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 32px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .content-body {
+        padding: 32px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--accent-gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+      }
+      .btn-logout {
+        padding: 8px 16px;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-logout:hover {
+        background: rgba(255,255,255,0.1);
+        color: white;
+      }
+      
+      /* --- CUSTOM STYLES FOR PLANT GRID --- */
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 32px;
+      }
+      
+      .breadcrumb {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        margin-bottom: 4px;
+        font-weight: 500;
+      }
+      
+      .page-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin: 0;
+        line-height: 1.1;
+      }
+      
+      .btn-blue {
+        background-color: #2563eb;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.2s, transform 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+      }
+      
+      .btn-blue:hover {
+        background-color: #1d4ed8;
+        transform: translateY(-2px);
+      }
+      
+      .plant-grid {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 24px;
+      }
+      
+      @media (min-width: 640px) {
+        .plant-grid { grid-template-columns: repeat(2, 1fr); }
+      }
+      @media (min-width: 1024px) {
+        .plant-grid { grid-template-columns: repeat(3, 1fr); }
+      }
+      @media (min-width: 1366px) {
+        .plant-grid { grid-template-columns: repeat(4, 1fr); }
+      }
+      
+      .plant-card {
+        background-color: #1A2028; /* Dark Navy */
+        border-radius: 16px;
+        padding: 24px;
+        min-height: 240px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+      }
+      
+      .plant-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        border-color: var(--accent-secondary);
+      }
+      
+      .plant-card.with-bg {
+        background-color: transparent;
+        border: none;
+      }
+      
+      .card-kebab {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 4px;
+        z-index: 2;
+      }
+      .card-kebab:hover { color: white; }
+      
+      .plant-code {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #f8fafc;
+        margin: 0 0 auto 0;
+        z-index: 2;
+      }
+      
+      .plant-details {
+        margin-top: 32px;
+        z-index: 2;
+      }
+      
+      .plant-name {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: white;
+        margin: 0 0 2px 0;
+      }
+      
+      .plant-company {
+        font-size: 0.95rem;
+        color: #94a3b8;
+        margin: 0 0 6px 0;
+        font-weight: 500;
+      }
+      
+      .plant-location {
+        font-size: 0.85rem;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 0;
+      }
+      
+      /* --- Kebab Dropdown --- */
+      .kebab-dropdown {
+        position: absolute;
+        top: 40px;
+        right: 20px;
+        background: #1A2028;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        display: none;
+        flex-direction: column;
+        min-width: 180px;
+        z-index: 10;
+        overflow: hidden;
+      }
+      .kebab-dropdown.show {
+        display: flex;
+      }
+      .dropdown-item {
+        padding: 12px 16px;
+        color: #E5E7EB;
+        text-decoration: none;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: background 0.2s;
+        cursor: pointer;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+      .dropdown-item:last-child {
+        border-bottom: none;
+      }
+      .dropdown-item:hover {
+        background: rgba(255,255,255,0.05);
+      }
+      .dropdown-item.text-red {
+        color: #ef4444;
+      }
+      
+      /* --- Modals --- */
+      .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        backdrop-filter: blur(4px);
+      }
+      .modal-overlay.show {
+        display: flex;
+      }
+      .modal-box {
+        background: #1E242B;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 32px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        text-align: center;
+      }
+      .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: white;
+        margin-top: 0;
+        margin-bottom: 12px;
+      }
+      .modal-desc {
+        color: #9CA3AF;
+        font-size: 0.95rem;
+        margin-bottom: 24px;
+        line-height: 1.5;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+      }
+      .btn-outline {
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+        flex: 1;
+      }
+      .btn-outline:hover {
+        background: rgba(255,255,255,0.05);
+      }
+      .btn-danger {
+        background: #ef4444;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+        flex: 1;
+      }
+      .btn-danger:hover {
+        background: #dc2626;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #FF7043 0%, #FF3D00 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+        flex: 1;
+      }
+      .btn-primary:hover {
+        background: linear-gradient(135deg, #FF8A65 0%, #FF5722 100%);
+      }
+      
+      /* Image Upload Preview */
+      .upload-preview {
+        width: 100%;
+        height: 160px;
+        background: rgba(0,0,0,0.2);
+        border: 2px dashed var(--border-color);
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+      }
+      .upload-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none;
+      }
+      .upload-icon {
+        color: #9CA3AF;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      .file-input {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <aside class="sidebar glass-panel">
+        <a href="/" class="sidebar-logo">
+          <div class="logo-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+          </div>
+          Maintain<span>X</span>
+        </a>
+        <nav class="nav-menu">
+          <a href="/" class="nav-item">Dashboard</a>
+          <a href="/list-task.html" class="nav-item">List Task</a>
+          <a href="/asset-register.html" class="nav-item active">Asset Register</a>
+          <a href="/warehouse.html" class="nav-item">Warehouse & Sparepart</a>
+          <a href="/schedule.html" class="nav-item">Schedule & Planning</a>
+          <a href="/report.html" class="nav-item">Report</a>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Topbar -->
+        <header class="topbar">
+          <div>
+            <h1 style="margin: 0; font-size: 1.8rem;">MaintainX System</h1>
+            <p style="color: var(--text-secondary); margin-top: 4px;">Modul Pemantauan Infrastruktur</p>
+          </div>
+          <div class="user-profile">
+            <div class="avatar">A</div>
+            <div>
+              <div style="font-weight: 600;">Admin User</div>
+              <div style="font-size: 0.85rem; color: var(--text-secondary);">Administrator</div>
+            </div>
+            <button class="btn-logout" onclick="window.location.href='/login.html'">Keluar</button>
+          </div>
+        </header>
+
+        <div class="content-body">
+          <!-- Page Header: Breadcrumb & Title -->
+          <div class="page-header">
+            <div>
+              <div class="breadcrumb">All Locations &gt;</div>
+              <h2 class="page-title">AREA/LOKASI</h2>
+            </div>
+            <button class="btn-blue" onclick="window.location.href='/register-plant.html'">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              PLANT
+            </button>
+          </div>
+          
+          <!-- Grid Cards -->
+          <div class="plant-grid" id="plant-grid-container">
+            <!-- Cards will be generated by asset-register.js -->
+          </div>
+          
+        </div>
+      </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Delete Modal -->
+    <div id="delete-modal" class="modal-overlay">
+      <div class="modal-box">
+        <h3 class="modal-title">Konfirmasi Penghapusan</h3>
+        <p class="modal-desc">Apakah anda yakin untuk menghapus Area/Lokasi ini?</p>
+        <div class="modal-actions">
+          <button class="btn-outline" id="btn-cancel-delete">Batal</button>
+          <button class="btn-danger" id="confirm-delete-btn">Hapus</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Image Modal -->
+    <div id="upload-modal" class="modal-overlay">
+      <div class="modal-box">
+        <h3 class="modal-title">Upload Gambar Latar</h3>
+        <p class="modal-desc" style="margin-bottom:16px;">Pilih gambar untuk memperbarui tampilan kartu Area/Lokasi.</p>
+        
+        <input type="file" id="image-upload-input" class="file-input" accept="image/png, image/jpeg, image/jpg" />
+        
+        <div class="upload-preview" id="upload-preview-box" style="cursor:pointer;">
+          <div class="upload-icon" id="upload-icon-placeholder">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <span style="font-size:0.85rem;">Klik untuk memilih gambar</span>
+          </div>
+          <img id="upload-preview-img" src="" alt="Preview" />
+        </div>
+        
+        <div class="modal-actions">
+          <button class="btn-outline" id="btn-trigger-upload">Upload</button>
+          <button class="btn-primary" id="save-image-btn">Save</button>
+          <button class="btn-outline" style="flex:0.5;" id="btn-cancel-upload">Batal</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/asset-register.js"></script>
+  </body>
+</html>

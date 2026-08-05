@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Utama - MaintainX</title>
+    
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      /* Tambahan Styling Khusus Dashboard Mockup */
+      body {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        margin: 0;
+        font-family: 'Outfit', sans-serif;
+      }
+      .dashboard-layout {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+      /* Moved sidebar styles to style.css */
+      .main-content {
+        flex: 1;
+        padding: 0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: var(--bg-primary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 32px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .content-body {
+        padding: 32px;
+        flex: 1;
+      }
+      .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+      }
+      .btn-logout {
+        padding: 8px 16px;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-logout:hover {
+        background: rgba(255,255,255,0.1);
+        color: white;
+      }
+      
+      /* Grid Stat */
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+      .card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+      }
+      .card-title {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        margin-bottom: 12px;
+      }
+      .card-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <aside class="sidebar glass-panel">
+        <a href="/" class="sidebar-logo">
+          <div class="logo-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+          </div>
+          Maintain<span>X</span>
+        </a>
+        <nav class="nav-menu">
+          <a href="/" class="nav-item active">Dashboard</a>
+          <a href="/list-task.html" class="nav-item">List Task</a>
+          <a href="/asset-register.html" class="nav-item">Asset Register</a>
+          <a href="/warehouse.html" class="nav-item">Warehouse & Sparepart</a>
+          <a href="/schedule.html" class="nav-item">Schedule & Planning</a>
+          <a href="/report.html" class="nav-item">Report</a>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Topbar -->
+        <header class="topbar">
+          <div>
+            <h1 style="margin: 0; font-size: 1.8rem;">Ringkasan Operasional</h1>
+            <p style="color: var(--text-secondary); margin-top: 4px;">Selamat datang kembali, Admin!</p>
+          </div>
+          <div class="user-profile">
+            <button id="theme-toggle" class="btn-logout theme-btn" aria-label="Toggle Dark Mode">🌙</button>
+            <div class="avatar">A</div>
+            <div>
+              <div style="font-weight: 600;">Admin User</div>
+              <div style="font-size: 0.85rem; color: var(--text-secondary);">Administrator</div>
+            </div>
+            <button class="btn-logout" onclick="window.location.href='/login.html'">Keluar</button>
+          </div>
+        </header>
+
+        <div class="content-body">
+          <!-- Quick Stats Control -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h2 style="margin: 0; font-size: 1.2rem; color: var(--text-primary);">Statistik Utama</h2>
+          <select id="timeRangeToggle" class="modal-filter-select" onchange="updateChartsData()" style="padding: 6px 12px; border-radius: 6px; background: var(--glass-bg); color: var(--text-primary); border: 1px solid var(--border-color);">
+            <option value="mom">Bulan ke Bulan (MoM)</option>
+            <option value="yoy">Tahun ke Tahun (YoY)</option>
+          </select>
+        </div>
+        <!-- Quick Stats -->
+        <div class="dashboard-grid" id="quick-stats">
+          <!-- Card 1 -->
+          <div class="card glass-panel stat-card-clickable" onclick="openModal('Total Assets', 'assets')">
+            <div class="stat-header">
+              <div class="stat-icon" style="color: var(--accent-secondary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+              <div style="font-size: 1.5rem; font-weight: 700;">248</div>
+            </div>
+            <div class="card-title" style="margin-bottom:0;">TOTAL ASSETS</div>
+            <div class="stat-chart-container"><canvas id="chartAssets"></canvas></div>
+          </div>
+          <!-- Card 2 -->
+          <div class="card glass-panel stat-card-clickable" onclick="openModal('WO Done', 'wodone')">
+            <div class="stat-header">
+              <div class="stat-icon" style="color: var(--status-success);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+              <div style="font-size: 1.5rem; font-weight: 700;" id="statWODoneVal">124 <span style="font-size: 0.9rem; color: var(--status-success);" id="statWODonePerc">▲ 15%</span></div>
+            </div>
+            <div class="card-title" style="margin-bottom:0;">WO DONE</div>
+            <div class="stat-chart-container"><canvas id="chartWODone"></canvas></div>
+          </div>
+          <!-- Card 3 -->
+          <div class="card glass-panel stat-card-clickable" onclick="openModal('Overdue Preventive', 'overdue')">
+            <div class="stat-header">
+              <div class="stat-icon" style="color: var(--status-warning);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+              <div style="font-size: 1.5rem; font-weight: 700;">8</div>
+            </div>
+            <div class="card-title" style="margin-bottom:0;">OVERDUE PREVENTIVE</div>
+            <div class="stat-chart-container"><canvas id="chartOverdue"></canvas></div>
+          </div>
+          <!-- Card 4 -->
+          <div class="card glass-panel stat-card-clickable critical-panel" onclick="openModal('WO Active', 'active')">
+            <div class="stat-header">
+              <div class="stat-icon" style="color: var(--status-error);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
+              <div style="font-size: 1.5rem; font-weight: 700;" id="statWOActiveVal">32 <span style="font-size: 0.9rem; color: var(--status-error);" id="statWOActivePerc">24%</span></div>
+            </div>
+            <div class="card-title" style="margin-bottom:0;">WO ACTIVE</div>
+            <div class="stat-chart-container"><canvas id="chartWOActive"></canvas></div>
+          </div>
+        </div>
+
+
+        <!-- Middle Layout: Calendar -->
+        <div class="card glass-panel" style="margin-bottom: 24px;">
+          <div class="calendar-header">
+            <h3 style="margin: 0;">MAINTENANCE SCHEDULE CALENDAR <span id="calendar-month-year" style="color: var(--accent-primary); margin-left: 8px;"></span></h3>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <select id="cal-month" class="modal-filter-select" onchange="changeCalendarMonth('filter')">
+                <option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option>
+                <option value="3">April</option><option value="4">Mei</option><option value="5">Juni</option>
+                <option value="6">Juli</option><option value="7" selected>Agustus</option><option value="8">September</option>
+                <option value="9">Oktober</option><option value="10">November</option><option value="11">Desember</option>
+              </select>
+              <select id="cal-year" class="modal-filter-select" onchange="changeCalendarMonth('filter')">
+                <option value="2025">2025</option>
+                <option value="2026" selected>2026</option>
+                <option value="2027">2027</option>
+              </select>
+              <div class="calendar-nav">
+                <button onclick="changeCalendarMonth('prev')">&lt;</button>
+                <button onclick="changeCalendarMonth('today')">Today</button>
+                <button onclick="changeCalendarMonth('next')">&gt;</button>
+              </div>
+            </div>
+          </div>
+          <div class="calendar-grid">
+            <div class="calendar-day-name">Sen</div>
+            <div class="calendar-day-name">Sel</div>
+            <div class="calendar-day-name">Rab</div>
+            <div class="calendar-day-name">Kam</div>
+            <div class="calendar-day-name">Jum</div>
+            <div class="calendar-day-name">Sab</div>
+            <div class="calendar-day-name">Min</div>
+            <!-- Cells generated by JS -->
+          </div>
+        </div>
+
+        <!-- Bottom Layout: Split -->
+        <div class="dashboard-split">
+          <!-- Left: Table -->
+          <div class="card glass-panel" style="display: flex; flex-direction: column; height: 100%;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px;">
+              <h3 style="margin: 0;">RECENT COMPLETED WORK ORDERS</h3>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <label for="filter-start" style="font-size:0.85rem; color:var(--text-secondary);">Mulai:</label>
+                <input type="date" id="filter-start" class="modal-filter-select" />
+                <label for="filter-end" style="font-size:0.85rem; color:var(--text-secondary);">Selesai:</label>
+                <input type="date" id="filter-end" class="modal-filter-select" />
+                <button onclick="filterRecentWO()" style="padding: 6px 12px; border-radius: 6px; background: var(--accent-primary); color: white; border: none; cursor: pointer; font-weight: 500;">Filter</button>
+              </div>
+            </div>
+            <div class="table-responsive" style="flex: 1; min-height: 450px; overflow-y: auto;">
+              <table class="data-table" style="table-layout: fixed; width: 100%;">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>ID Asset</th>
+                    <th>Equipment</th>
+                    <th>Lokasi Asset</th>
+                    <th>Description Task</th>
+                    <th>Technician</th>
+                    <th>Start Date</th>
+                    <th>Done Date</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-wo-tbody">
+                  <!-- Generated by JS -->
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Pagination Controls -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: auto; padding-top: 16px;">
+              <span id="recent-wo-page-info" style="font-size: 0.9rem; color: var(--text-secondary);">Page 1 of 1</span>
+              <div style="display: flex; gap: 4px;">
+                <button onclick="changeRecentWOPage(-1)" style="padding: 6px 12px; border-radius: 6px; background: var(--bg-color); color: var(--text-primary); border: 1px solid var(--border-color); cursor: pointer;">&lt;</button>
+                <button onclick="changeRecentWOPage(1)" style="padding: 6px 12px; border-radius: 6px; background: var(--bg-color); color: var(--text-primary); border: 1px solid var(--border-color); cursor: pointer;">&gt;</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column wrapper -->
+          <div style="display: flex; flex-direction: column; gap: 24px; height: 100%;">
+            
+            <!-- Right: Donut Chart -->
+            <div class="card glass-panel" style="flex: 1; display: flex; flex-direction: column;">
+              <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px;">
+                <h3 style="margin: 0;">WORK ORDER STATUS DISTRIBUTION</h3>
+                <div style="display: flex; gap: 8px;">
+                  <select id="donut-month" class="modal-filter-select" onchange="updateDonutChart()">
+                    <option value="7" selected>Agustus</option>
+                    <option value="8">September</option>
+                  </select>
+                  <select id="donut-year" class="modal-filter-select" onchange="updateDonutChart()">
+                    <option value="2026" selected>2026</option>
+                  </select>
+                </div>
+              </div>
+              <div class="donut-container" style="flex: 1; min-height: 450px;">
+                <canvas id="donutChart"></canvas>
+              </div>
+            </div>
+            
+            <!-- Right: Karyawan On-Site -->
+            <div class="card glass-panel" style="flex: 1; display: flex; flex-direction: column;">
+              <h3 style="margin-top: 0; margin-bottom: 16px;">MANPOWER</h3>
+              <div class="table-responsive" style="flex: 1; min-height: 450px; overflow-y: auto;">
+                <table class="data-table" style="margin: 0; table-layout: fixed; width: 100%;">
+                  <thead style="position: sticky; top: 0; background: var(--bg-surface); z-index: 10;">
+                    <tr>
+                      <th style="width: 50px; text-align: center;">Status</th>
+                      <th>NIK</th>
+                      <th>Nama</th>
+                      <th>Jabatan</th>
+                    </tr>
+                  </thead>
+                  <tbody id="employee-tbody">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+          </div>
+        
+        </div> <!-- End of content-body -->
+      </main>
+    </div>
+    
+    <!-- Modal Popup Container -->
+    <div class="modal-overlay" id="detail-modal" onclick="closeModal(event)">
+      <div class="modal-content" style="max-width: 900px; width: 95%;">
+        <div class="modal-header">
+          <h2 id="modal-title" style="margin: 0;">Detail</h2>
+          <div style="display: flex; gap: 8px;" id="modal-filters-container">
+            <!-- Dynamic Filters inserted by JS -->
+          </div>
+          <button class="modal-close" onclick="closeModal(event, true)">&times;</button>
+        </div>
+        <div class="modal-body" id="modal-body-container" style="max-height: 60vh; overflow-y: auto;">
+          <p id="modal-desc" style="color: var(--text-secondary); line-height: 1.6;"></p>
+        </div>
+      </div>
+    </div>
+    
+    <script type="module" src="/main.js"></script>
+    <script src="/dashboard.js"></script>
+  </body>
+</html>

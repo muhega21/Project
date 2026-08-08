@@ -53,36 +53,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   `;
   document.head.appendChild(style);
-  // Theme Toggle Logic
-  const themeToggleBtns = document.querySelectorAll('.theme-btn');
-  const currentTheme = localStorage.getItem('theme') || 'dark'; // Default to dark if not set
-  
-  // Apply initial theme
-  if (currentTheme === 'dark') {
-    document.documentElement.setAttribute('data-theme', 'dark');
-  } else {
-    document.documentElement.removeAttribute('data-theme');
-  }
 
-  const updateButtonText = (theme) => {
-    themeToggleBtns.forEach(btn => {
-      btn.textContent = theme === 'dark' ? '☀️' : '🌙';
-    });
-  };
-  updateButtonText(currentTheme);
-
-  themeToggleBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      let theme = document.documentElement.getAttribute('data-theme');
-      if (theme === 'dark') {
-        document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('theme', 'light');
-        updateButtonText('light');
-      } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('theme', 'dark');
-        updateButtonText('dark');
-      }
-    });
-  });
 });

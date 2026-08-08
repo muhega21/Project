@@ -77,6 +77,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
+    // 2.5 Edit Action Click
+    const editAction = e.target.closest('.action-edit');
+    if (editAction) {
+      const code = editAction.getAttribute('data-code');
+      openPlantModal(code);
+      return;
+    }
+    
     // 3. Delete Action Click
     const deleteAction = e.target.closest('.action-delete');
     if (deleteAction) {
@@ -103,7 +111,105 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   setupUploadLogic();
+  setupPlantModalLogic();
 });
+
+// Expose openPlantModal to global scope for the + PLANT button
+window.openPlantModal = function(code = null) {
+  document.querySelectorAll('.kebab-dropdown.show').forEach(el => el.classList.remove('show'));
+  
+  const modal = document.getElementById('plant-modal');
+  const title = document.getElementById('plant-modal-title');
+  const form = document.getElementById('plant-form');
+  const isEditInput = document.getElementById('plant-is-edit');
+  const codeInput = document.getElementById('plant-code');
+  const generateBtn = document.getElementById('btn-generate-code');
+  const submitBtn = document.getElementById('plant-submit-btn');
+  
+  form.reset();
+  
+  if (code) {
+    // Edit Mode
+    const plant = mockPlants.find(p => p.code === code);
+    if (plant) {
+      title.textContent = 'Edit Area/Lokasi';
+      isEditInput.value = 'true';
+      document.getElementById('plant-name').value = plant.name;
+      document.getElementById('plant-company').value = plant.company;
+      codeInput.value = plant.code;
+      codeInput.readOnly = true;
+      codeInput.style.opacity = '0.7';
+      document.getElementById('plant-address').value = plant.location;
+      
+      generateBtn.style.display = 'none';
+      submitBtn.textContent = 'SIMPAN';
+    }
+  } else {
+    // Add Mode
+    title.textContent = 'Registrasi Area/Lokasi';
+    isEditInput.value = 'false';
+    codeInput.readOnly = false;
+    codeInput.style.opacity = '1';
+    generateBtn.style.display = 'block';
+    submitBtn.textContent = 'REGISTER';
+  }
+  
+  modal.classList.add('show');
+};
+
+function setupPlantModalLogic() {
+  const modal = document.getElementById('plant-modal');
+  const form = document.getElementById('plant-form');
+  
+  document.getElementById('btn-close-plant-modal')?.addEventListener('click', () => {
+    modal.classList.remove('show');
+  });
+  
+  document.getElementById('btn-generate-code')?.addEventListener('click', () => {
+    const name = document.getElementById('plant-name').value;
+    const prefix = name ? name.substring(0, 3).toUpperCase() : 'PLT';
+    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    document.getElementById('plant-code').value = `${prefix}-${randomNum}`;
+  });
+  
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const isEdit = document.getElementById('plant-is-edit').value === 'true';
+    const name = document.getElementById('plant-name').value.trim();
+    const company = document.getElementById('plant-company').value;
+    const code = document.getElementById('plant-code').value.trim();
+    const address = document.getElementById('plant-address').value.trim();
+    
+    if (!name || !company || !code || !address) {
+      alert("Semua field wajib diisi!");
+      return;
+    }
+    
+    if (isEdit) {
+      const index = mockPlants.findIndex(p => p.code === code);
+      if (index !== -1) {
+        mockPlants[index] = {
+          ...mockPlants[index],
+          name,
+          company,
+          location: address
+        };
+      }
+    } else {
+      mockPlants.push({
+        code,
+        name,
+        company,
+        location: address,
+        bgImage: null
+      });
+    }
+    
+    savePlants();
+    renderPlantGrid();
+    modal.classList.remove('show');
+  });
+}
 
 let currentTargetCode = null;
 
@@ -132,11 +238,11 @@ function renderPlantGrid() {
     }
     
     card.innerHTML = `
-      <div class="card-kebab kebab-toggle" data-code="${plant.code}">
+      <div class="card-kebab kebab-toggle absolute top-3 right-3 w-8 h-8 bg-slate-800 border border-slate-600 rounded-md hover:bg-slate-700 cursor-pointer z-10 transition-all flex items-center justify-center shadow-lg" data-code="${plant.code}">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
       </div>
-      <div class="kebab-dropdown" id="dropdown-${plant.code}">
-        <a class="dropdown-item" href="/register-plant.html?edit=${plant.code}">
+      <div class="kebab-dropdown z-20" id="dropdown-${plant.code}">
+        <a class="dropdown-item action-edit" data-code="${plant.code}" href="javascript:void(0)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           Edit
         </a>

@@ -87,47 +87,47 @@ function Report() {
   }, []);
 
   return (
-    <div className="flex flex-col h-full gap-6 text-gray-200 font-sans">
+    <div className="flex flex-col h-full gap-6 text-text-primary font-sans">
       
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-bg-surface p-6 rounded-xl border border-gray-700 shadow-lg flex items-center gap-4">
+        <div className="bg-bg-surface p-6 rounded-xl border border-border-color shadow-lg flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center">
             <CheckCircle size={24} />
           </div>
           <div>
-            <div className="text-gray-400 text-sm">WO Selesai (Bulan ini)</div>
-            <div className="text-2xl font-bold text-white">81</div>
+            <div className="text-text-secondary text-sm">WO Selesai (Bulan ini)</div>
+            <div className="text-2xl font-bold text-text-primary">81</div>
           </div>
         </div>
         
-        <div className="bg-bg-surface p-6 rounded-xl border border-gray-700 shadow-lg flex items-center gap-4">
+        <div className="bg-bg-surface p-6 rounded-xl border border-border-color shadow-lg flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-yellow-500/20 text-yellow-500 flex items-center justify-center">
             <Clock size={24} />
           </div>
           <div>
-            <div className="text-gray-400 text-sm">Rata-rata Waktu Respon</div>
-            <div className="text-2xl font-bold text-white">1.2 <span className="text-sm font-normal text-gray-500">Jam</span></div>
+            <div className="text-text-secondary text-sm">Rata-rata Waktu Respon</div>
+            <div className="text-2xl font-bold text-text-primary">1.2 <span className="text-sm font-normal text-text-secondary">Jam</span></div>
           </div>
         </div>
 
-        <div className="bg-bg-surface p-6 rounded-xl border border-gray-700 shadow-lg flex items-center gap-4">
+        <div className="bg-bg-surface p-6 rounded-xl border border-border-color shadow-lg flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center">
             <TrendingUp size={24} />
           </div>
           <div>
-            <div className="text-gray-400 text-sm">Produktivitas Teknisi</div>
-            <div className="text-2xl font-bold text-white">94%</div>
+            <div className="text-text-secondary text-sm">Produktivitas Teknisi</div>
+            <div className="text-2xl font-bold text-text-primary">94%</div>
           </div>
         </div>
         
-        <div className="bg-bg-surface p-6 rounded-xl border border-gray-700 shadow-lg flex items-center gap-4">
+        <div className="bg-bg-surface p-6 rounded-xl border border-border-color shadow-lg flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center">
             <Activity size={24} />
           </div>
           <div>
-            <div className="text-gray-400 text-sm">Total Downtime</div>
-            <div className="text-2xl font-bold text-white">90 <span className="text-sm font-normal text-gray-500">Jam</span></div>
+            <div className="text-text-secondary text-sm">Total Downtime</div>
+            <div className="text-2xl font-bold text-text-primary">90 <span className="text-sm font-normal text-text-secondary">Jam</span></div>
           </div>
         </div>
       </div>
@@ -135,10 +135,10 @@ function Report() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-[400px]">
         {/* Trend Chart */}
-        <div className="bg-bg-surface rounded-xl border border-gray-700 shadow-lg flex flex-col p-6">
+        <div className="bg-bg-surface rounded-xl border border-border-color shadow-lg flex flex-col p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-white">Tren Penyelesaian Pekerjaan (YTD)</h3>
-            <select className="bg-[#12161A] border border-gray-700 rounded-lg p-2 text-sm text-gray-300 focus:outline-none focus:border-[#FF7043]">
+            <h3 className="text-lg font-bold text-text-primary">Tren Penyelesaian Pekerjaan (YTD)</h3>
+            <select className="bg-bg-dark border border-border-color rounded-lg p-2 text-sm text-text-secondary focus:outline-none focus:border-[#FF7043]">
               <option>2026</option>
               <option>2025</option>
             </select>
@@ -149,10 +149,10 @@ function Report() {
         </div>
 
         {/* Downtime Chart */}
-        <div className="bg-bg-surface rounded-xl border border-gray-700 shadow-lg flex flex-col p-6">
+        <div className="bg-bg-surface rounded-xl border border-border-color shadow-lg flex flex-col p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-white">Downtime Aset Tertinggi</h3>
-            <select className="bg-[#12161A] border border-gray-700 rounded-lg p-2 text-sm text-gray-300 focus:outline-none focus:border-[#FF7043]">
+            <h3 className="text-lg font-bold text-text-primary">Downtime Aset Tertinggi</h3>
+            <select className="bg-bg-dark border border-border-color rounded-lg p-2 text-sm text-text-secondary focus:outline-none focus:border-[#FF7043]">
               <option>Bulan Ini</option>
               <option>Kuartal Ini</option>
             </select>

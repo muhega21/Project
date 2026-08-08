@@ -11,6 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="/style.css" />
+    <script src="/src/global-ui.js"></script>
+    <meta name="view-transition" content="same-origin">
   </head>
   <body class="auth-page">
     <!-- Background Elements -->
@@ -45,6 +47,18 @@
           <div class="form-group">
             <label for="login-email">Email atau Username</label>
             <input type="text" id="login-email" class="form-input" placeholder="contoh@perusahaan.com atau Admin" required>
+          </div>
+          <div class="form-group">
+            <label for="login-role">Kategori Pengguna (Level)</label>
+            <select id="login-role" class="form-input" required>
+              <option value="Administrator">Administrator</option>
+              <option value="Supervisor">Supervisor</option>
+              <option value="Admin">Admin</option>
+              <option value="Visitor">Visitor</option>
+              <option value="Foreman">Foreman</option>
+              <option value="Warehouse">Warehouse</option>
+              <option value="Teknisi">Teknisi</option>
+            </select>
           </div>
           <div class="form-group">
             <div class="label-row">
@@ -124,12 +138,44 @@
         e.preventDefault(); // Mencegah reload halaman
         const emailOrUser = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
+        let role = document.getElementById('login-role').value;
 
-        // Cek kombinasi hardcode Admin / 12345
-        if ((emailOrUser === 'Admin' || emailOrUser === 'admin@maintainx.com') && password === '12345') {
-          window.location.href = '/dashboard.html'; // Arahkan ke dashboard
+        // Ambil data pekerja dari LocalStorage
+        const savedWorkers = localStorage.getItem('mx_workers');
+        let worker = null;
+
+        if (savedWorkers) {
+          const workers = JSON.parse(savedWorkers);
+          // Cari pekerja berdasarkan email atau nama
+          worker = workers.find(w => w.email === emailOrUser || w.nama === emailOrUser);
+        }
+
+        if (worker) {
+          // Pekerja ditemukan di database
+          if (password === worker.password || password === '12345') {
+            if (worker.status === 'Off Site') {
+              alert('Akses Ditolak! Akun Anda saat ini berstatus Off Site dan tidak dapat masuk.');
+              return;
+            }
+            // Login sukses
+            localStorage.setItem('userRole', worker.profilAkun);
+            localStorage.setItem('userName', worker.nama);
+            window.location.href = 'dashboard.html';
+          } else {
+            alert('Password salah!');
+          }
         } else {
-          alert('Email/Username atau password salah! Coba gunakan Username "Admin" dan Password "12345".');
+          // Fallback: Jika tidak ditemukan (Mockup Admin manual)
+          if (password === '12345') {
+            if (emailOrUser === 'Admin' || emailOrUser === 'admin@maintainx.com') {
+              role = 'Administrator';
+            }
+            localStorage.setItem('userRole', role);
+            localStorage.setItem('userName', emailOrUser || 'Admin User');
+            window.location.href = 'dashboard.html';
+          } else {
+            alert('Akun tidak ditemukan atau password salah! Coba gunakan Password "12345".');
+          }
         }
       });
     </script>

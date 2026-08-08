@@ -107,27 +107,25 @@ function LayoutArea() {
       case 'Warning': return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50';
       case 'Running': return 'bg-green-500/20 text-green-500 border-green-500/50';
       case 'Maintenance': return 'bg-blue-500/20 text-blue-500 border-blue-500/50';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/50';
+      default: return 'bg-gray-500/20 text-text-secondary border-gray-500/50';
     }
   };
 
   return (
-    <div className="h-screen w-screen bg-[#12161A] text-gray-200 overflow-hidden flex flex-col font-sans">
+    <div className="h-full w-full bg-bg-dark text-text-primary flex flex-col font-sans relative overflow-hidden">
       
       {/* Header */}
-      <header className="flex-none h-16 bg-[#1A2028] border-b border-gray-800 px-6 flex items-center justify-between z-50 shadow-md">
-        <div className="flex items-center gap-2 text-sm text-gray-400 font-medium">
-          <a href="/asset-register.html" className="hover:text-blue-400 transition-colors cursor-pointer flex items-center">
-            All Locations
-          </a>
-          <ChevronRight size={16} />
-          <span className="text-gray-200">{plant.name}</span>
-          <ChevronRight size={16} />
-          <span className="text-white font-bold text-lg ml-2">Layout Area/Lokasi</span>
+      <header className="flex-none bg-bg-surface border-b border-border-color px-6 py-4 flex items-center justify-between z-50 shadow-md">
+        <div className="flex flex-col">
+          <h2 className="text-xl font-bold text-text-primary m-0 leading-tight flex items-center gap-2">
+            <Map size={20} className="text-blue-500" />
+            {plant.name}
+          </h2>
+          <span className="text-sm text-text-secondary font-medium font-mono mt-1 pl-7">Code: {plant.code}</span>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-xs px-3 py-1 bg-gray-800 rounded-full border border-gray-700">Code: {plant.code}</div>
-        </div>
+        <a href="/asset-register.html" className="text-sm px-4 py-2 bg-btn-secondary hover:bg-gray-700 text-text-secondary rounded-lg border border-border-color transition-colors flex items-center gap-2">
+          Kembali
+        </a>
       </header>
 
       {/* Main Canvas Area */}
@@ -148,7 +146,7 @@ function LayoutArea() {
           }}
         >
           {/* Blueprint Image */}
-          <div className="relative w-[1200px] h-[800px] max-w-none max-h-none shadow-2xl mx-auto my-12 bg-[#1E242B] border border-gray-700 rounded-lg overflow-hidden">
+          <div className="relative w-[1200px] h-[800px] max-w-none max-h-none shadow-2xl mx-auto my-12 bg-bg-surface border border-border-color rounded-lg overflow-hidden">
             <img 
               src={bgImage} 
               alt="Blueprint" 
@@ -160,7 +158,7 @@ function LayoutArea() {
             {showZones && MOCK_ZONES.map(zone => (
               <div 
                 key={zone.id}
-                className={`zone-overlay absolute border-2 transition-all duration-200 cursor-pointer flex items-center justify-center font-bold text-white shadow-lg backdrop-blur-[2px]
+                className={`zone-overlay absolute border-2 transition-all duration-200 cursor-pointer flex items-center justify-center font-bold text-text-primary shadow-lg backdrop-blur-[2px]
                   ${selectedZone === zone.id ? 'ring-4 ring-white/50 border-white z-20 scale-[1.02]' : 'border-white/30 hover:border-white/70 z-10'}`}
                 style={{
                   top: `${zone.rect.top}%`,
@@ -180,26 +178,26 @@ function LayoutArea() {
         </div>
 
         {/* Floating Toolbar (Left) */}
-        <div className="toolbar absolute top-6 left-6 bg-[#1E242B]/90 backdrop-blur-md border border-gray-700 rounded-xl p-2 shadow-2xl flex flex-col gap-2 z-40">
-          <div className="text-[10px] uppercase tracking-widest text-gray-500 font-bold px-2 py-1 mb-1 border-b border-gray-700/50">Controls</div>
+        <div className="toolbar absolute top-6 left-6 bg-bg-surface/90 backdrop-blur-md border border-border-color rounded-xl p-2 shadow-2xl flex flex-col gap-2 z-40">
+          <div className="text-[10px] uppercase tracking-widest text-text-secondary font-bold px-2 py-1 mb-1 border-b border-border-color/50">Controls</div>
           
-          <button className="p-2 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors tooltip-trigger" onClick={() => setZoom(z => Math.min(3, z + 0.2))} title="Zoom In">
+          <button className="p-2 hover:bg-gray-700 rounded-lg text-text-secondary transition-colors tooltip-trigger" onClick={() => setZoom(z => Math.min(3, z + 0.2))} title="Zoom In">
             <ZoomIn size={20} />
           </button>
-          <button className="p-2 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors" onClick={() => setZoom(z => Math.max(0.5, z - 0.2))} title="Zoom Out">
+          <button className="p-2 hover:bg-gray-700 rounded-lg text-text-secondary transition-colors" onClick={() => setZoom(z => Math.max(0.5, z - 0.2))} title="Zoom Out">
             <ZoomOut size={20} />
           </button>
-          <button className="p-2 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors" onClick={() => { setRotation(0); setPan({x:0,y:0}); setZoom(1); }} title="Reset View">
+          <button className="p-2 hover:bg-gray-700 rounded-lg text-text-secondary transition-colors" onClick={() => { setRotation(0); setPan({x:0,y:0}); setZoom(1); }} title="Reset View">
             <RotateCw size={20} />
           </button>
           
           <div className="w-full h-px bg-gray-700 my-1"></div>
           
-          <button className={`p-2 rounded-lg transition-colors ${showZones ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-gray-700 text-gray-300'}`} onClick={() => setShowZones(!showZones)} title="Toggle Zones">
+          <button className={`p-2 rounded-lg transition-colors ${showZones ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-gray-700 text-text-secondary'}`} onClick={() => setShowZones(!showZones)} title="Toggle Zones">
             <Layers size={20} />
           </button>
           
-          <select className="bg-gray-800 border border-gray-600 text-xs rounded px-1 py-1.5 text-gray-300 outline-none w-10 overflow-hidden appearance-none text-center hover:bg-gray-700 cursor-pointer" title="Shape Mode">
+          <select className="bg-btn-secondary border border-gray-600 text-xs rounded px-1 py-1.5 text-text-secondary outline-none w-10 overflow-hidden appearance-none text-center hover:bg-gray-700 cursor-pointer" title="Shape Mode">
             <option>⬜</option>
             <option>⬟</option>
           </select>
@@ -209,23 +207,23 @@ function LayoutArea() {
           <button className="p-2 hover:bg-gray-700 rounded-lg text-green-400 transition-colors" title="Add Zone">
             <Plus size={20} />
           </button>
-          <button className="p-2 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors" title="Edit Zones">
+          <button className="p-2 hover:bg-gray-700 rounded-lg text-text-secondary transition-colors" title="Edit Zones">
             <Edit2 size={20} />
           </button>
           <button className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors" title="Delete Selected">
             <Trash2 size={20} />
           </button>
-          <button className="p-2 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors" onClick={handleUploadBg} title="Upload Background">
+          <button className="p-2 hover:bg-gray-700 rounded-lg text-text-secondary transition-colors" onClick={handleUploadBg} title="Upload Background">
             <ImageIcon size={20} />
           </button>
         </div>
 
         {/* Floating Equipment Status Panel (Right) */}
-        <div className="status-panel absolute top-6 right-6 w-80 bg-[#1E242B]/95 backdrop-blur-xl border border-gray-700 rounded-xl shadow-2xl overflow-hidden z-40 flex flex-col max-h-[calc(100vh-120px)] transition-all duration-300">
-          <div className="p-4 border-b border-gray-700 bg-black/20 flex items-center justify-between">
+        <div className="status-panel absolute top-6 right-6 w-80 bg-bg-surface/95 backdrop-blur-xl border border-border-color rounded-xl shadow-2xl overflow-hidden z-40 flex flex-col max-h-[calc(100vh-120px)] transition-all duration-300">
+          <div className="p-4 border-b border-border-color bg-black/20 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <List size={18} className="text-blue-400" />
-              <h3 className="font-semibold text-gray-100 tracking-wide">Equipment Status</h3>
+              <h3 className="font-semibold text-text-primary tracking-wide">Equipment Status</h3>
             </div>
             {selectedZone && (
               <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded border border-blue-500/30">
@@ -236,7 +234,7 @@ function LayoutArea() {
           
           <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs text-gray-500 uppercase bg-black/10 sticky top-0">
+              <thead className="text-xs text-text-secondary uppercase bg-black/10 sticky top-0">
                 <tr>
                   <th className="px-3 py-2 font-medium">Nama Asset</th>
                   <th className="px-3 py-2 font-medium text-right">Status</th>
@@ -244,8 +242,8 @@ function LayoutArea() {
               </thead>
               <tbody>
                 {displayEquipments.map(eq => (
-                  <tr key={eq.id} className="border-b border-gray-800 hover:bg-gray-700/30 transition-colors">
-                    <td className="px-3 py-3 font-medium text-gray-300 truncate max-w-[150px]" title={eq.name}>
+                  <tr key={eq.id} className="border-b border-border-color hover:bg-gray-700/30 transition-colors">
+                    <td className="px-3 py-3 font-medium text-text-secondary truncate max-w-[150px]" title={eq.name}>
                       {eq.name}
                     </td>
                     <td className="px-3 py-3 text-right">
@@ -257,7 +255,7 @@ function LayoutArea() {
                 ))}
                 {displayEquipments.length === 0 && (
                   <tr>
-                    <td colSpan="2" className="text-center py-8 text-gray-500 text-xs">
+                    <td colSpan="2" className="text-center py-8 text-text-secondary text-xs">
                       Tidak ada data peralatan di zona ini.
                     </td>
                   </tr>

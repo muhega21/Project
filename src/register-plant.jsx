@@ -140,7 +140,7 @@ function RegisterPlant() {
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">
             {isEditMode ? 'EDIT AREA/LOKASI' : 'REGISTRASI AREA/LOKASI'}
           </h1>
-          <p className="text-gray-500">
+          <p className="text-text-secondary">
             {isEditMode 
               ? 'Halaman ini dimaksudkan untuk mengubah data AREA/LOKASI yang sudah terdaftar.' 
               : 'Halaman ini dimaksudkan untuk mendaftarkan AREA/LOKASI baru ke Maintain X. Silakan lengkapi formulir berikut :'}
@@ -189,7 +189,7 @@ function RegisterPlant() {
             <div className="flex gap-3">
               <input 
                 type="text" 
-                className={`flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-800 ${isEditMode ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed' : 'border-gray-300'}`}
+                className={`flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-800 ${isEditMode ? 'bg-gray-100 border-gray-200 text-text-secondary cursor-not-allowed' : 'border-gray-300'}`}
                 placeholder="PLT-XXX"
                 value={formData.code}
                 onChange={(e) => setFormData({...formData, code: e.target.value})}
@@ -219,7 +219,7 @@ function RegisterPlant() {
           <div className="pt-6 flex justify-center border-t border-gray-100 relative">
             <button 
               type="submit"
-              className="px-12 py-3 bg-blue-600 text-white text-lg font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transform transition-transform hover:-translate-y-1 active:translate-y-0"
+              className="px-12 py-3 bg-blue-600 text-text-primary text-lg font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transform transition-transform hover:-translate-y-1 active:translate-y-0"
             >
               {isEditMode ? 'SIMPAN' : 'REGISTER'}
             </button>

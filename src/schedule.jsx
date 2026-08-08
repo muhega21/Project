@@ -32,7 +32,7 @@ function Schedule() {
     const cells = [];
     // Empty cells for previous month
     for (let i = 0; i < offset; i++) {
-      cells.push(<div key={`empty-${i}`} className="min-h-[100px] border border-gray-800 bg-[#12161A]/50 p-2"></div>);
+      cells.push(<div key={`empty-${i}`} className="min-h-[100px] border border-border-color bg-bg-dark/50 p-2"></div>);
     }
     
     // Days of current month
@@ -41,18 +41,18 @@ function Schedule() {
       const isToday = i === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
       
       cells.push(
-        <div key={i} className={`min-h-[120px] border border-gray-800 bg-bg-surface p-2 transition-colors hover:bg-gray-800/80 ${isToday ? 'ring-2 ring-[#FF7043] ring-inset' : ''}`}>
+        <div key={i} className={`min-h-[120px] border border-border-color bg-bg-surface p-2 transition-colors hover:bg-btn-secondary/80 ${isToday ? 'ring-2 ring-[#FF7043] ring-inset' : ''}`}>
           <div className="flex justify-between items-start mb-2">
-            <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-[#FF7043] text-white' : 'text-gray-400'}`}>
+            <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-[#FF7043] text-text-primary' : 'text-text-secondary'}`}>
               {i}
             </span>
             {dayEvents.length > 0 && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">{dayEvents.length} Tasks</span>}
           </div>
           <div className="flex flex-col gap-1 overflow-y-auto max-h-[80px] scrollbar-thin">
             {dayEvents.map(event => (
-              <div key={event.id} className="text-xs p-1.5 bg-[#12161A] border-l-2 border-[#FF7043] rounded cursor-pointer hover:bg-gray-700 transition-colors" title={`${event.title} - ${event.worker}`}>
-                <div className="font-semibold text-gray-200 truncate">{event.title}</div>
-                <div className="text-gray-500 truncate">{event.asset}</div>
+              <div key={event.id} className="text-xs p-1.5 bg-bg-dark border-l-2 border-[#FF7043] rounded cursor-pointer hover:bg-gray-700 transition-colors" title={`${event.title} - ${event.worker}`}>
+                <div className="font-semibold text-text-primary truncate">{event.title}</div>
+                <div className="text-text-secondary truncate">{event.asset}</div>
               </div>
             ))}
           </div>
@@ -64,41 +64,41 @@ function Schedule() {
     const totalCells = cells.length;
     const remaining = (7 - (totalCells % 7)) % 7;
     for (let i = 0; i < remaining; i++) {
-      cells.push(<div key={`empty-next-${i}`} className="min-h-[100px] border border-gray-800 bg-[#12161A]/50 p-2"></div>);
+      cells.push(<div key={`empty-next-${i}`} className="min-h-[100px] border border-border-color bg-bg-dark/50 p-2"></div>);
     }
     
     return cells;
   };
 
   return (
-    <div className="flex flex-col h-full gap-6 text-gray-200 font-sans">
+    <div className="flex flex-col h-full gap-6 text-text-primary font-sans">
       
       {/* Action Bar */}
-      <div className="flex justify-between items-center bg-bg-surface p-4 rounded-xl border border-gray-700 shadow-lg">
+      <div className="flex justify-between items-center bg-bg-surface p-4 rounded-xl border border-border-color shadow-lg">
         <div className="flex items-center gap-4">
-          <button onClick={prevMonth} className="p-2 hover:bg-gray-800 rounded-lg transition-colors border border-gray-700"><ChevronLeft size={20} /></button>
-          <h2 className="text-xl font-bold text-white min-w-[150px] text-center">
+          <button onClick={prevMonth} className="p-2 hover:bg-btn-secondary rounded-lg transition-colors border border-border-color"><ChevronLeft size={20} /></button>
+          <h2 className="text-xl font-bold text-text-primary min-w-[150px] text-center">
             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
           </h2>
-          <button onClick={nextMonth} className="p-2 hover:bg-gray-800 rounded-lg transition-colors border border-gray-700"><ChevronRight size={20} /></button>
+          <button onClick={nextMonth} className="p-2 hover:bg-btn-secondary rounded-lg transition-colors border border-border-color"><ChevronRight size={20} /></button>
         </div>
         
         <div className="flex gap-3">
-          <button className="bg-bg-surface border border-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+          <button className="bg-bg-surface border border-border-color hover:bg-btn-secondary text-text-primary px-4 py-2 rounded-lg font-medium transition-colors">
             Hari Ini
           </button>
-          <button className="bg-gradient-to-r from-[#FF7043] to-[#FF3D00] hover:from-[#FF8A65] hover:to-[#FF5722] text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg transition-all active:scale-95">
+          <button className="bg-gradient-to-r from-accent to-accent-secondary hover:from-[#FF8A65] hover:to-[#FF5722] text-text-primary px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg transition-all active:scale-95">
             <CalendarIcon size={18} /> Tambah Jadwal
           </button>
         </div>
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-bg-surface rounded-xl border border-gray-700 shadow-lg overflow-hidden flex-1 flex flex-col">
+      <div className="bg-bg-surface rounded-xl border border-border-color shadow-lg overflow-hidden flex-1 flex flex-col">
         {/* Days Header */}
-        <div className="grid grid-cols-7 bg-[#12161A] border-b border-gray-700">
+        <div className="grid grid-cols-7 bg-bg-dark border-b border-border-color">
           {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'].map(day => (
-            <div key={day} className="py-3 text-center text-sm font-semibold text-gray-400">
+            <div key={day} className="py-3 text-center text-sm font-semibold text-text-secondary">
               {day}
             </div>
           ))}

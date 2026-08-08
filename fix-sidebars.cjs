@@ -1,47 +1,10 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Report - MaintainX</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    tailwind.config={theme:{extend:{fontFamily:{sans:['Outfit','sans-serif']},colors:{'bg-surface':'var(--bg-surface)','bg-dark':'var(--bg-color)','text-primary':'var(--text-primary)','text-secondary':'var(--text-secondary)','border-color':'var(--border-color)','accent':'var(--accent-primary)','accent-secondary':'var(--accent-secondary)','btn-secondary':'var(--btn-secondary-bg)','input-bg':'var(--input-bg)'}}}};</script>
-  <style>
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-primary);
-      margin: 0;
-      font-family: 'Outfit', sans-serif;
-    }
-    .dashboard-layout { display: flex; height: 100vh; overflow: hidden; }
-    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    
-    .user-profile { display: flex; align-items: center; gap: 12px; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; font-weight: bold; }
-    .btn-logout { padding: 8px 16px; border-radius: 6px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); cursor: pointer; }
-    .btn-logout:hover { background: rgba(255,255,255,0.1); color: white; }
-    #root { flex: 1; overflow-y: auto; padding: 32px; }
-  </style>
-    <script src="/src/auth-guard.js"></script>
-  <script src="/src/global-ui.js"></script>
-    <meta name="view-transition" content="same-origin">
-  </head>
-<body>
-  <div class="dashboard-layout">
-    <aside class="sidebar glass-panel">
-      <a href="/dashboard.html" class="sidebar-logo">
-        <div class="logo-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-        </div>
-        Maintain<span>X</span>
-      </a>
-      <nav class="nav-menu">
+const fs = require('fs');
+const path = require('path');
+
+const directory = __dirname;
+const htmlFiles = fs.readdirSync(directory).filter(file => file.endsWith('.html') && file !== 'login.html');
+
+const standardSidebar = `
         <a href="/dashboard.html" class="nav-item">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
           Dashboard
@@ -70,7 +33,7 @@
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
           Schedule & Planning
         </a>
-        <a href="/report.html" class="nav-item active">
+        <a href="/report.html" class="nav-item">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           Report
         </a>
@@ -82,28 +45,33 @@
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           Pengaturan
         </a>
-</nav>
-    </aside>
+`;
+
+htmlFiles.forEach(file => {
+  const filePath = path.join(directory, file);
+  let content = fs.readFileSync(filePath, 'utf-8');
+
+  // Regex to match the nav-menu content
+  const regex = /(<nav class="nav-menu">)([\s\S]*?)(<\/nav>)/;
+  
+  if (regex.test(content)) {
+    // Generate the specific sidebar for this file by adding "active" class
+    let newMenuContent = standardSidebar;
     
-    <main class="main-content">
-      <header class="topbar">
-        <div>
-          <h1 style="margin: 0; font-size: 1.8rem;">Laporan Kinerja</h1>
-          <p style="color: var(--text-secondary); margin-top: 4px;">Analitik Maintenance dan Produktivitas</p>
-        </div>
-        <div class="user-profile">
-          <div class="avatar">A</div>
-          <div>
-            <div style="font-weight: 600;">Admin User</div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary);">Administrator</div>
-          </div>
-          <button class="btn-logout" onclick="window.location.href='login.html'">Keluar</button>
-        </div>
-      </header>
-      
-      <div id="root"></div>
-    </main>
-  </div>
-  <script type="module" src="/src/report.jsx"></script>
-</body>
-</html>
+    const targetFile = `/${file}`;
+    
+    // A simple replace for the exact active item
+    const lines = newMenuContent.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes(`href="${targetFile}"`) || lines[i].includes(`href="${file}"`)) {
+        lines[i] = lines[i].replace('class="nav-item"', 'class="nav-item active"');
+      }
+    }
+    
+    newMenuContent = lines.join('\n');
+
+    content = content.replace(regex, `$1${newMenuContent}$3`);
+    fs.writeFileSync(filePath, content);
+    console.log(`Updated sidebar in ${file}`);
+  }
+});

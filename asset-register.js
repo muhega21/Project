@@ -6,6 +6,7 @@ const defaultPlants = [
     name: 'Karawang Assembly Plant',
     company: 'PT. MaintainX Manufacturing',
     location: 'Kawasan Industri KIIC, Jawa Barat',
+    owner: 'Budi Santoso',
     bgImage: 'https://images.unsplash.com/photo-1565515261739-16628fb68770?q=80&w=600&auto=format&fit=crop'
   },
   {
@@ -13,6 +14,7 @@ const defaultPlants = [
     name: 'Cikarang Distribution Hub',
     company: 'PT. MaintainX Logistics',
     location: 'Cikarang Dry Port, Bekasi',
+    owner: 'Siti Rahma',
     bgImage: null
   },
   {
@@ -20,6 +22,7 @@ const defaultPlants = [
     name: 'Surabaya Heavy Machining',
     company: 'PT. MaintainX Heavy Ind.',
     location: 'Kawasan SIER, Jawa Timur',
+    owner: 'Ahmad Fauzi',
     bgImage: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=600&auto=format&fit=crop'
   },
   {
@@ -27,6 +30,7 @@ const defaultPlants = [
     name: 'Batam Electronics Facility',
     company: 'PT. MaintainX Electronics',
     location: 'Batamindo Industrial Park, Kepri',
+    owner: 'Dewi Kusuma',
     bgImage: null
   },
   {
@@ -34,214 +38,140 @@ const defaultPlants = [
     name: 'Tangerang Packaging Unit',
     company: 'PT. MaintainX Packaging',
     location: 'Kawasan Industri Jatake, Banten',
+    owner: 'Rudi Hermawan',
     bgImage: null
   }
 ];
 
 let mockPlants = [];
+let currentTargetCode = null;
+let tempImageBase64 = null;
 
+// ==========================================
+// KNOWN COMPANIES (for dropdown matching)
+// ==========================================
+const KNOWN_COMPANIES = [
+  'PT. MaintainX Manufacturing',
+  'PT. MaintainX Logistics',
+  'PT. MaintainX Heavy Ind.',
+  'PT. MaintainX Electronics',
+  'PT. MaintainX Packaging'
+];
+
+// ==========================================
+// INITIALIZE ON DOM READY
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+  // Load plants from localStorage
   const saved = localStorage.getItem('maintainx_plants');
   if (saved) {
-    mockPlants = JSON.parse(saved);
+    try {
+      mockPlants = JSON.parse(saved);
+    } catch(e) {
+      mockPlants = [...defaultPlants];
+    }
   } else {
-    mockPlants = defaultPlants;
+    mockPlants = [...defaultPlants];
     localStorage.setItem('maintainx_plants', JSON.stringify(mockPlants));
   }
-  
-  renderPlantGrid();
 
-  // Handle clicks inside the grid using event delegation
-  document.getElementById('plant-grid-container')?.addEventListener('click', (e) => {
-    // 1. Kebab Toggle Click
+  renderPlantGrid();
+  setupGridClicks();
+  setupDeleteModal();
+  setupUploadModal();
+  setupPlantModal();
+});
+
+// ==========================================
+// GRID CLICK DELEGATION
+// ==========================================
+function setupGridClicks() {
+  const container = document.getElementById('plant-grid-container');
+  if (!container) return;
+
+  container.addEventListener('click', (e) => {
+    // Kebab toggle
     const kebabToggle = e.target.closest('.kebab-toggle');
     if (kebabToggle) {
       e.stopPropagation();
       const code = kebabToggle.getAttribute('data-code');
       const dropdown = document.getElementById(`dropdown-${code}`);
       const isShowing = dropdown.classList.contains('show');
-      
       document.querySelectorAll('.kebab-dropdown.show').forEach(el => el.classList.remove('show'));
-      
-      if (!isShowing) {
-        dropdown.classList.add('show');
-      }
+      if (!isShowing) dropdown.classList.add('show');
       return;
     }
-    
-    // 2. Upload Action Click
-    const uploadAction = e.target.closest('.action-upload');
-    if (uploadAction) {
-      const code = uploadAction.getAttribute('data-code');
-      openUploadModal(code);
-      return;
-    }
-    
-    // 2.5 Edit Action Click
+
+    // Edit action
     const editAction = e.target.closest('.action-edit');
     if (editAction) {
-      const code = editAction.getAttribute('data-code');
-      openPlantModal(code);
+      e.stopPropagation();
+      document.querySelectorAll('.kebab-dropdown.show').forEach(el => el.classList.remove('show'));
+      openPlantModal(editAction.getAttribute('data-code'));
       return;
     }
-    
-    // 3. Delete Action Click
+
+    // Upload action
+    const uploadAction = e.target.closest('.action-upload');
+    if (uploadAction) {
+      e.stopPropagation();
+      document.querySelectorAll('.kebab-dropdown.show').forEach(el => el.classList.remove('show'));
+      openUploadModal(uploadAction.getAttribute('data-code'));
+      return;
+    }
+
+    // Delete action
     const deleteAction = e.target.closest('.action-delete');
     if (deleteAction) {
-      const code = deleteAction.getAttribute('data-code');
-      openDeleteModal(code);
+      e.stopPropagation();
+      document.querySelectorAll('.kebab-dropdown.show').forEach(el => el.classList.remove('show'));
+      openDeleteModal(deleteAction.getAttribute('data-code'));
       return;
     }
-    
-    // 4. Card Click (Navigate to Layout Area)
+
+    // Card click → navigate
     const card = e.target.closest('.plant-card');
     if (card && !e.target.closest('.kebab-toggle') && !e.target.closest('.kebab-dropdown')) {
       const code = card.getAttribute('data-code');
-      if (code) {
-        window.location.href = `/layout-area.html?code=${code}`;
-      }
+      if (code) window.location.href = `/layout-area.html?code=${code}`;
     }
   });
 
-  // Close dropdowns when clicking outside
+  // Close dropdowns when clicking outside grid
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.kebab-toggle') && !e.target.closest('.kebab-dropdown')) {
       document.querySelectorAll('.kebab-dropdown.show').forEach(el => el.classList.remove('show'));
     }
   });
-  
-  setupUploadLogic();
-  setupPlantModalLogic();
-});
-
-// Expose openPlantModal to global scope for the + PLANT button
-window.openPlantModal = function(code = null) {
-  document.querySelectorAll('.kebab-dropdown.show').forEach(el => el.classList.remove('show'));
-  
-  const modal = document.getElementById('plant-modal');
-  const title = document.getElementById('plant-modal-title');
-  const form = document.getElementById('plant-form');
-  const isEditInput = document.getElementById('plant-is-edit');
-  const codeInput = document.getElementById('plant-code');
-  const generateBtn = document.getElementById('btn-generate-code');
-  const submitBtn = document.getElementById('plant-submit-btn');
-  
-  form.reset();
-  
-  if (code) {
-    // Edit Mode
-    const plant = mockPlants.find(p => p.code === code);
-    if (plant) {
-      title.textContent = 'Edit Area/Lokasi';
-      isEditInput.value = 'true';
-      document.getElementById('plant-name').value = plant.name;
-      document.getElementById('plant-company').value = plant.company;
-      codeInput.value = plant.code;
-      codeInput.readOnly = true;
-      codeInput.style.opacity = '0.7';
-      document.getElementById('plant-address').value = plant.location;
-      
-      generateBtn.style.display = 'none';
-      submitBtn.textContent = 'SIMPAN';
-    }
-  } else {
-    // Add Mode
-    title.textContent = 'Registrasi Area/Lokasi';
-    isEditInput.value = 'false';
-    codeInput.readOnly = false;
-    codeInput.style.opacity = '1';
-    generateBtn.style.display = 'block';
-    submitBtn.textContent = 'REGISTER';
-  }
-  
-  modal.classList.add('show');
-};
-
-function setupPlantModalLogic() {
-  const modal = document.getElementById('plant-modal');
-  const form = document.getElementById('plant-form');
-  
-  document.getElementById('btn-close-plant-modal')?.addEventListener('click', () => {
-    modal.classList.remove('show');
-  });
-  
-  document.getElementById('btn-generate-code')?.addEventListener('click', () => {
-    const name = document.getElementById('plant-name').value;
-    const prefix = name ? name.substring(0, 3).toUpperCase() : 'PLT';
-    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    document.getElementById('plant-code').value = `${prefix}-${randomNum}`;
-  });
-  
-  form?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const isEdit = document.getElementById('plant-is-edit').value === 'true';
-    const name = document.getElementById('plant-name').value.trim();
-    const company = document.getElementById('plant-company').value;
-    const code = document.getElementById('plant-code').value.trim();
-    const address = document.getElementById('plant-address').value.trim();
-    
-    if (!name || !company || !code || !address) {
-      alert("Semua field wajib diisi!");
-      return;
-    }
-    
-    if (isEdit) {
-      const index = mockPlants.findIndex(p => p.code === code);
-      if (index !== -1) {
-        mockPlants[index] = {
-          ...mockPlants[index],
-          name,
-          company,
-          location: address
-        };
-      }
-    } else {
-      mockPlants.push({
-        code,
-        name,
-        company,
-        location: address,
-        bgImage: null
-      });
-    }
-    
-    savePlants();
-    renderPlantGrid();
-    modal.classList.remove('show');
-  });
 }
 
-let currentTargetCode = null;
-
-function savePlants() {
-  localStorage.setItem('maintainx_plants', JSON.stringify(mockPlants));
-}
-
+// ==========================================
+// RENDER GRID
+// ==========================================
 function renderPlantGrid() {
   const container = document.getElementById('plant-grid-container');
   if (!container) return;
-  
+
   container.innerHTML = '';
-  
+
   mockPlants.forEach(plant => {
     const card = document.createElement('div');
     card.className = 'plant-card relative';
     card.setAttribute('data-code', plant.code);
     card.style.cursor = 'pointer';
-    
-    // Apply background image if present
+
     if (plant.bgImage) {
       card.classList.add('with-bg');
       card.style.backgroundImage = `linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.95)), url('${plant.bgImage}')`;
       card.style.backgroundSize = 'cover';
       card.style.backgroundPosition = 'center';
     }
-    
+
     card.innerHTML = `
-      <div class="card-kebab kebab-toggle absolute top-3 right-3 w-8 h-8 bg-slate-800 border border-slate-600 rounded-md hover:bg-slate-700 cursor-pointer z-10 transition-all flex items-center justify-center shadow-lg" data-code="${plant.code}">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+      <div class="card-kebab kebab-toggle" data-code="${plant.code}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
       </div>
-      <div class="kebab-dropdown z-20" id="dropdown-${plant.code}">
+      <div class="kebab-dropdown" id="dropdown-${plant.code}">
         <a class="dropdown-item action-edit" data-code="${plant.code}" href="javascript:void(0)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           Edit
@@ -256,7 +186,6 @@ function renderPlantGrid() {
         </a>
       </div>
       <p class="plant-code">${plant.code}</p>
-      
       <div class="plant-details">
         <p class="plant-name">${plant.name}</p>
         <p class="plant-company">${plant.company}</p>
@@ -266,15 +195,23 @@ function renderPlantGrid() {
         </p>
       </div>
     `;
-    
+
     container.appendChild(card);
   });
 }
 
-// --- Delete Modal Logic ---
+// ==========================================
+// SAVE TO LOCALSTORAGE
+// ==========================================
+function savePlants() {
+  localStorage.setItem('maintainx_plants', JSON.stringify(mockPlants));
+}
+
+// ==========================================
+// DELETE MODAL
+// ==========================================
 function openDeleteModal(code) {
   currentTargetCode = code;
-  document.querySelectorAll('.kebab-dropdown.show').forEach(el => el.classList.remove('show'));
   document.getElementById('delete-modal').classList.add('show');
 }
 
@@ -283,35 +220,33 @@ function closeDeleteModal() {
   document.getElementById('delete-modal').classList.remove('show');
 }
 
-document.getElementById('btn-cancel-delete')?.addEventListener('click', closeDeleteModal);
+function setupDeleteModal() {
+  document.getElementById('btn-cancel-delete')?.addEventListener('click', closeDeleteModal);
+  document.getElementById('confirm-delete-btn')?.addEventListener('click', () => {
+    if (currentTargetCode) {
+      mockPlants = mockPlants.filter(p => p.code !== currentTargetCode);
+      savePlants();
+      renderPlantGrid();
+      closeDeleteModal();
+    }
+  });
+}
 
-document.getElementById('confirm-delete-btn')?.addEventListener('click', () => {
-  if (currentTargetCode) {
-    mockPlants = mockPlants.filter(p => p.code !== currentTargetCode);
-    savePlants();
-    renderPlantGrid();
-    closeDeleteModal();
-  }
-});
-
-// --- Upload Image Modal Logic ---
-let tempImageBase64 = null;
-
+// ==========================================
+// UPLOAD IMAGE MODAL
+// ==========================================
 function openUploadModal(code) {
   currentTargetCode = code;
   tempImageBase64 = null;
-  
-  document.querySelectorAll('.kebab-dropdown.show').forEach(el => el.classList.remove('show'));
-  
+
   const imgElement = document.getElementById('upload-preview-img');
   const placeholder = document.getElementById('upload-icon-placeholder');
   const input = document.getElementById('image-upload-input');
-  
-  input.value = '';
-  imgElement.style.display = 'none';
-  imgElement.src = '';
-  placeholder.style.display = 'flex';
-  
+
+  if (input) input.value = '';
+  if (imgElement) { imgElement.style.display = 'none'; imgElement.src = ''; }
+  if (placeholder) placeholder.style.display = 'flex';
+
   document.getElementById('upload-modal').classList.add('show');
 }
 
@@ -321,45 +256,35 @@ function closeUploadModal() {
   document.getElementById('upload-modal').classList.remove('show');
 }
 
-function setupUploadLogic() {
+function setupUploadModal() {
   const input = document.getElementById('image-upload-input');
   if (!input) return;
-  
+
   document.getElementById('btn-cancel-upload')?.addEventListener('click', closeUploadModal);
-  
-  const triggerBtns = [
-    document.getElementById('btn-trigger-upload'),
-    document.getElementById('upload-preview-box')
-  ];
-  
-  triggerBtns.forEach(btn => {
-    btn?.addEventListener('click', () => {
-      input.click();
-    });
+
+  [document.getElementById('btn-trigger-upload'), document.getElementById('upload-preview-box')].forEach(btn => {
+    btn?.addEventListener('click', () => input.click());
   });
-  
+
   input.addEventListener('change', (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        tempImageBase64 = event.target.result;
-        const imgElement = document.getElementById('upload-preview-img');
-        const placeholder = document.getElementById('upload-icon-placeholder');
-        
-        imgElement.src = tempImageBase64;
-        imgElement.style.display = 'block';
-        placeholder.style.display = 'none';
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      tempImageBase64 = ev.target.result;
+      const img = document.getElementById('upload-preview-img');
+      const ph = document.getElementById('upload-icon-placeholder');
+      if (img) { img.src = tempImageBase64; img.style.display = 'block'; }
+      if (ph) ph.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
   });
-  
+
   document.getElementById('save-image-btn')?.addEventListener('click', () => {
     if (currentTargetCode && tempImageBase64) {
-      const index = mockPlants.findIndex(p => p.code === currentTargetCode);
-      if (index !== -1) {
-        mockPlants[index].bgImage = tempImageBase64;
+      const idx = mockPlants.findIndex(p => p.code === currentTargetCode);
+      if (idx !== -1) {
+        mockPlants[idx].bgImage = tempImageBase64;
         savePlants();
         renderPlantGrid();
       }
@@ -367,3 +292,138 @@ function setupUploadLogic() {
     closeUploadModal();
   });
 }
+
+// ==========================================
+// PLANT MODAL (ADD / EDIT)
+// ==========================================
+function setupPlantModal() {
+  // Close button
+  document.getElementById('btn-close-plant-modal')?.addEventListener('click', () => {
+    document.getElementById('plant-modal').classList.remove('show');
+  });
+
+  // Company dropdown "other" toggle
+  document.getElementById('plant-company')?.addEventListener('change', (e) => {
+    const otherInput = document.getElementById('plant-company-other');
+    if (e.target.value === 'other') {
+      otherInput.style.display = 'block';
+    } else {
+      otherInput.style.display = 'none';
+      otherInput.value = '';
+    }
+  });
+
+  // Submit button click
+  document.getElementById('plant-submit-btn')?.addEventListener('click', () => {
+    handlePlantFormSubmit();
+  });
+}
+
+function handlePlantFormSubmit() {
+  const isEdit = document.getElementById('plant-is-edit').value === 'true';
+  const name = document.getElementById('plant-name').value.trim();
+  const address = document.getElementById('plant-address').value.trim();
+  const owner = document.getElementById('plant-owner').value.trim();
+  const code = document.getElementById('plant-code').value.trim();
+  const layoutFile = document.getElementById('plant-layout').files[0];
+
+  let company = document.getElementById('plant-company').value;
+  if (company === 'other') {
+    company = document.getElementById('plant-company-other').value.trim();
+  }
+
+  // Validate all required fields
+  if (!name) { alert('Nama Plant wajib diisi!'); return; }
+  if (!company || company === '') { alert('Perusahaan wajib dipilih!'); return; }
+  if (!address) { alert('Alamat wajib diisi!'); return; }
+  if (!owner) { alert('Pemilik Area wajib diisi!'); return; }
+  if (!isEdit && !layoutFile) { alert('Gambar Lay Out wajib diupload untuk plant baru!'); return; }
+
+  const saveData = (imageStr) => {
+    if (isEdit) {
+      const idx = mockPlants.findIndex(p => p.code === code);
+      if (idx !== -1) {
+        mockPlants[idx].name = name;
+        mockPlants[idx].company = company;
+        mockPlants[idx].location = address;
+        mockPlants[idx].owner = owner;
+        if (imageStr) mockPlants[idx].bgImage = imageStr;
+      }
+    } else {
+      mockPlants.push({ code, name, company, location: address, owner, bgImage: imageStr });
+    }
+    savePlants();
+    renderPlantGrid();
+    document.getElementById('plant-modal').classList.remove('show');
+    alert(isEdit ? 'Perubahan berhasil disimpan!' : 'Plant berhasil diregistrasi!');
+  };
+
+  if (layoutFile) {
+    const reader = new FileReader();
+    reader.onload = (ev) => saveData(ev.target.result);
+    reader.onerror = () => alert('Gagal membaca file gambar!');
+    reader.readAsDataURL(layoutFile);
+  } else {
+    saveData(null);
+  }
+}
+
+// ==========================================
+// OPEN PLANT MODAL (exposed globally)
+// ==========================================
+window.openPlantModal = function(code) {
+  if (typeof code !== 'string') code = null;
+
+  // Close any open dropdowns
+  document.querySelectorAll('.kebab-dropdown.show').forEach(el => el.classList.remove('show'));
+
+  const title = document.getElementById('plant-modal-title');
+  const isEditInput = document.getElementById('plant-is-edit');
+  const codeInput = document.getElementById('plant-code');
+  const submitBtn = document.getElementById('plant-submit-btn');
+  const companySelect = document.getElementById('plant-company');
+  const companyOther = document.getElementById('plant-company-other');
+  const layoutInput = document.getElementById('plant-layout');
+
+  // Reset form fields manually
+  document.getElementById('plant-name').value = '';
+  document.getElementById('plant-address').value = '';
+  document.getElementById('plant-owner').value = '';
+  companySelect.value = '';
+  companyOther.value = '';
+  companyOther.style.display = 'none';
+  layoutInput.value = '';
+
+  if (code) {
+    // === EDIT MODE ===
+    const plant = mockPlants.find(p => p.code === code);
+    if (!plant) return;
+
+    title.textContent = 'Edit Area/Lokasi';
+    isEditInput.value = 'true';
+    codeInput.value = plant.code;
+    document.getElementById('plant-name').value = plant.name;
+    document.getElementById('plant-address').value = plant.location;
+    document.getElementById('plant-owner').value = plant.owner || '';
+    submitBtn.textContent = 'Simpan Perubahan';
+
+    // Set company dropdown
+    if (KNOWN_COMPANIES.includes(plant.company)) {
+      companySelect.value = plant.company;
+      companyOther.style.display = 'none';
+    } else {
+      companySelect.value = 'other';
+      companyOther.value = plant.company;
+      companyOther.style.display = 'block';
+    }
+  } else {
+    // === ADD MODE ===
+    title.textContent = 'Registrasi Plant';
+    isEditInput.value = 'false';
+    const randomNum = Math.floor(Math.random() * 90000 + 10000).toString();
+    codeInput.value = `PLT-${randomNum}`;
+    submitBtn.textContent = 'Registrasi Plant';
+  }
+
+  document.getElementById('plant-modal').classList.add('show');
+};

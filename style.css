@@ -1090,26 +1090,27 @@ a {
   background-color: var(--bg-primary);
   background-image: repeating-linear-gradient(
     45deg,
-    rgba(255, 255, 255, 0.015),
-    rgba(255, 255, 255, 0.015) 10px,
+    rgba(255, 255, 255, 0.01),
+    rgba(255, 255, 255, 0.01) 10px,
     transparent 10px,
     transparent 20px
   );
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 24px;
+  padding: 10px 20px;
   border-bottom: 1px solid var(--border-color);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 .topbar h1 {
-  font-size: 1.5rem;
+  font-size: 1.25rem !important;
+  font-weight: 600;
   margin: 0;
 }
 .topbar p {
   color: var(--text-secondary);
   margin-top: 2px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 /* === SIDEBAR (Global) === */

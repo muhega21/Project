@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Layout Area/Lokasi - MaintainX</title>
+  <title>Detail Equipment - MaintainX</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
   <script>
     tailwind.config={theme:{extend:{fontFamily:{sans:['Outfit','sans-serif']},colors:{'bg-surface':'var(--bg-surface)','bg-dark':'var(--bg-color)','text-primary':'var(--text-primary)','text-secondary':'var(--text-secondary)','border-color':'var(--border-color)','accent':'var(--accent-primary)','accent-secondary':'var(--accent-secondary)','btn-secondary':'var(--btn-secondary-bg)','input-bg':'var(--input-bg)'}}}};</script>
   <style>
@@ -26,12 +25,12 @@
     .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; font-weight: bold; }
     .btn-logout { padding: 8px 16px; border-radius: 6px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); cursor: pointer; }
     .btn-logout:hover { background: rgba(255,255,255,0.1); color: white; }
-    #root { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+    #root { flex: 1; overflow: auto; display: flex; flex-direction: column; }
   </style>
   <script src="/src/auth-guard.js"></script>
   <script src="/src/global-ui.js"></script>
-    <meta name="view-transition" content="same-origin">
-  </head>
+  <meta name="view-transition" content="same-origin">
+</head>
 <body>
   <div class="dashboard-layout">
     <aside class="sidebar glass-panel">
@@ -82,14 +81,14 @@
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           Pengaturan
         </a>
-</nav>
+      </nav>
     </aside>
     
     <main class="main-content">
       <header class="topbar">
         <div>
-          <h1 style="margin: 0; font-size: 1.8rem;">Layout Area/Lokasi</h1>
-          <p style="color: var(--text-secondary); margin-top: 4px;">Pemetaan Infrastruktur dan Area</p>
+          <h1 style="margin: 0; font-size: 1.8rem;">Detail Equipment</h1>
+          <p style="color: var(--text-secondary); margin-top: 4px;">Daftar Peralatan dan Mesin per Area</p>
         </div>
         <div class="user-profile">
           <div class="avatar">A</div>
@@ -104,6 +103,6 @@
       <div id="root"></div>
     </main>
   </div>
-  <script type="module" src="/src/layout-area.jsx"></script>
+  <script type="module" src="/src/detail-equipment.jsx"></script>
 </body>
 </html>

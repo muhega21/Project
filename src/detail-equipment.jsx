@@ -6,16 +6,16 @@ import {
 } from 'lucide-react';
 
 const MOCK_EQUIPMENTS = [
-  { id: 'e1', zoneId: 'z1', name: '101677 | BOILER TUBE A', status: 'Down', type: 'Boiler Component', lastMaintenance: '15 Okt 2023' },
-  { id: 'e2', zoneId: 'z1', name: '101678 | BOILER VALVE B', status: 'Maintenance', type: 'Valve', lastMaintenance: '01 Nov 2023' },
-  { id: 'e3', zoneId: 'z2', name: '202110 | WATER PUMP 1', status: 'Running', type: 'Pump', lastMaintenance: '20 Sep 2023' },
-  { id: 'e4', zoneId: 'z2', name: '202111 | WATER FILTER', status: 'Warning', type: 'Filter', lastMaintenance: '10 Ags 2023' },
-  { id: 'e5', zoneId: 'z3', name: '305542 | RO MEMBRANE A', status: 'Running', type: 'Membrane', lastMaintenance: '05 Des 2023' },
-  { id: 'e6', zoneId: 'z3', name: '305543 | RO COMPRESSOR', status: 'Down', type: 'Compressor', lastMaintenance: '30 Okt 2023' },
-  { id: 'e7', zoneId: 'z1', name: '101679 | BOILER SENSOR 1', status: 'Running', type: 'Sensor', lastMaintenance: '10 Jan 2024' },
-  { id: 'e8', zoneId: 'z1', name: '101680 | BOILER SENSOR 2', status: 'Running', type: 'Sensor', lastMaintenance: '10 Jan 2024' },
-  { id: 'e9', zoneId: 'z1', name: '101681 | EXHAUST FAN', status: 'Running', type: 'Fan', lastMaintenance: '15 Des 2023' },
-  { id: 'e10', zoneId: 'z1', name: '101682 | COOLING PIPE', status: 'Warning', type: 'Pipe', lastMaintenance: '22 Jul 2023' }
+  { id: 'EQU-00001', zoneId: 'PLT-102', name: 'BOILER TUBE A', location: 'Lantai Dasar, Sektor A', status: 'Down' },
+  { id: 'EQU-00002', zoneId: 'PLT-102', name: 'BOILER VALVE B', location: 'Lantai Dasar, Sektor B', status: 'Maintenance' },
+  { id: 'EQU-00003', zoneId: 'PLT-088', name: 'WATER PUMP 1', location: 'Gudang Belakang', status: 'Running' },
+  { id: 'EQU-00004', zoneId: 'PLT-088', name: 'WATER FILTER', location: 'Ruang Pompa', status: 'Warning' },
+  { id: 'EQU-00005', zoneId: 'PLT-215', name: 'RO MEMBRANE A', location: 'Fasilitas Air', status: 'Running' },
+  { id: 'EQU-00006', zoneId: 'PLT-215', name: 'RO COMPRESSOR', location: 'Fasilitas Mesin', status: 'Down' },
+  { id: 'EQU-00007', zoneId: 'PLT-102', name: 'BOILER SENSOR 1', location: 'Lantai Dasar, Sektor A', status: 'Running' },
+  { id: 'EQU-00008', zoneId: 'PLT-102', name: 'BOILER SENSOR 2', location: 'Lantai Dasar, Sektor B', status: 'Running' },
+  { id: 'EQU-00009', zoneId: 'PLT-102', name: 'EXHAUST FAN', location: 'Atap Gedung A', status: 'Running' },
+  { id: 'EQU-00010', zoneId: 'PLT-102', name: 'COOLING PIPE', location: 'Lantai Dasar', status: 'Warning' }
 ];
 
 function DetailEquipment() {
@@ -72,7 +72,8 @@ function DetailEquipment() {
 
   const filteredData = equipments.filter(eq => 
     eq.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    eq.type.toLowerCase().includes(searchTerm.toLowerCase())
+    eq.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (eq.location && eq.location.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -89,7 +90,7 @@ function DetailEquipment() {
             <span className="text-white">Detail Equipment</span>
           </div>
           <h2 className="text-3xl font-extrabold text-white leading-tight">
-            Detail Equipment {zoneId ? `(Area ${zoneId.toUpperCase()})` : ''}
+            Detail Equipment
           </h2>
         </div>
         
@@ -141,28 +142,23 @@ function DetailEquipment() {
           <table className="w-full text-left border-collapse">
             <thead className="bg-black/20 text-xs uppercase tracking-wider text-text-secondary">
               <tr>
-                <th className="px-6 py-4 font-semibold">ID / Nama Asset</th>
-                <th className="px-6 py-4 font-semibold">Tipe</th>
-                <th className="px-6 py-4 font-semibold">Maintenance Terakhir</th>
-                <th className="px-6 py-4 font-semibold text-center">Status</th>
-                <th className="px-6 py-4 font-semibold text-right">Aksi</th>
+                <th className="px-6 py-4 font-semibold text-center w-16">No</th>
+                <th className="px-6 py-4 font-semibold">Kode Area/Lokasi</th>
+                <th className="px-6 py-4 font-semibold">ID Equipment</th>
+                <th className="px-6 py-4 font-semibold">Nama Equipment</th>
+                <th className="px-6 py-4 font-semibold">Lokasi Equipment</th>
+                <th className="px-6 py-4 font-semibold text-center">Status Operasional</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-color">
               {filteredData.length > 0 ? (
-                filteredData.map((eq) => (
+                filteredData.map((eq, index) => (
                   <tr key={eq.id} className="hover:bg-gray-800/30 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-white">{eq.name}</div>
-                      <div className="text-xs text-gray-500 mt-0.5 font-mono">#{eq.id}</div>
-                    </td>
-                    <td className="px-6 py-4 text-text-secondary">{eq.type}</td>
-                    <td className="px-6 py-4 text-text-secondary">
-                      <div className="flex items-center gap-2">
-                        <Clock size={14} className="text-gray-500" />
-                        {eq.lastMaintenance}
-                      </div>
-                    </td>
+                    <td className="px-6 py-4 text-center text-text-secondary">{index + 1}</td>
+                    <td className="px-6 py-4 font-mono text-text-secondary">{eq.zoneId}</td>
+                    <td className="px-6 py-4 font-mono text-blue-400">{eq.id}</td>
+                    <td className="px-6 py-4 font-semibold text-white">{eq.name}</td>
+                    <td className="px-6 py-4 text-text-secondary">{eq.location || '-'}</td>
                     <td className="px-6 py-4">
                       <div className="flex justify-center">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${getStatusColor(eq.status)}`}>
@@ -170,9 +166,6 @@ function DetailEquipment() {
                           {eq.status}
                         </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors">Lihat Log</button>
                     </td>
                   </tr>
                 ))

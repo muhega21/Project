@@ -158,4 +158,22 @@ document.addEventListener('DOMContentLoaded', () => {
       window.dispatchEvent(new CustomEvent('themeChanged', { detail: currentTheme }));
     });
   });
+
+  // 6. Global Sidebar Search Logic
+  const sidebarSearchInput = document.getElementById('global-sidebar-search');
+  if (sidebarSearchInput) {
+    sidebarSearchInput.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase();
+      const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
+      
+      navItems.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        if (text.includes(term)) {
+          item.style.display = 'flex';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    });
+  }
 });

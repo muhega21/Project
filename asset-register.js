@@ -78,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPlantGrid();
   setupGridClicks();
   setupDeleteModal();
-  setupUploadModal();
   setupPlantModal();
 });
 
@@ -111,14 +110,7 @@ function setupGridClicks() {
       return;
     }
 
-    // Upload action
-    const uploadAction = e.target.closest('.action-upload');
-    if (uploadAction) {
-      e.stopPropagation();
-      document.querySelectorAll('.kebab-dropdown.show').forEach(el => el.classList.remove('show'));
-      openUploadModal(uploadAction.getAttribute('data-code'));
-      return;
-    }
+
 
     // Delete action
     const deleteAction = e.target.closest('.action-delete');
@@ -160,29 +152,24 @@ function renderPlantGrid() {
     card.setAttribute('data-code', plant.code);
     card.style.cursor = 'pointer';
 
+    let imgHtml = '';
     if (plant.bgImage) {
       card.classList.add('with-bg');
-      card.style.backgroundImage = `linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.95)), url('${plant.bgImage}')`;
-      card.style.backgroundSize = 'cover';
-      card.style.backgroundPosition = 'center';
+      imgHtml = `<img src="${plant.bgImage}" alt="${plant.name}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;" />
+                 <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.95)); z-index: 1;"></div>`;
     }
 
     card.innerHTML = `
-      <div class="card-kebab kebab-toggle" data-code="${plant.code}">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+      ${imgHtml}
+      <div class="card-kebab kebab-toggle" data-code="${plant.code}" style="z-index: 3;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg>
       </div>
       <div class="kebab-dropdown" id="dropdown-${plant.code}">
-        <a class="dropdown-item action-edit" data-code="${plant.code}" href="javascript:void(0)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-          Edit
+        <a class="dropdown-item action-edit" data-code="${plant.code}" href="javascript:void(0)" title="Edit">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
         </a>
-        <a class="dropdown-item action-upload" data-code="${plant.code}" href="javascript:void(0)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-          Tambah Gambar
-        </a>
-        <a class="dropdown-item text-red action-delete" data-code="${plant.code}" href="javascript:void(0)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-          Hapus Area/Lokasi
+        <a class="dropdown-item text-red action-delete" data-code="${plant.code}" href="javascript:void(0)" title="Hapus">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
         </a>
       </div>
       <p class="plant-code">${plant.code}</p>
@@ -232,66 +219,7 @@ function setupDeleteModal() {
   });
 }
 
-// ==========================================
-// UPLOAD IMAGE MODAL
-// ==========================================
-function openUploadModal(code) {
-  currentTargetCode = code;
-  tempImageBase64 = null;
 
-  const imgElement = document.getElementById('upload-preview-img');
-  const placeholder = document.getElementById('upload-icon-placeholder');
-  const input = document.getElementById('image-upload-input');
-
-  if (input) input.value = '';
-  if (imgElement) { imgElement.style.display = 'none'; imgElement.src = ''; }
-  if (placeholder) placeholder.style.display = 'flex';
-
-  document.getElementById('upload-modal').classList.add('show');
-}
-
-function closeUploadModal() {
-  currentTargetCode = null;
-  tempImageBase64 = null;
-  document.getElementById('upload-modal').classList.remove('show');
-}
-
-function setupUploadModal() {
-  const input = document.getElementById('image-upload-input');
-  if (!input) return;
-
-  document.getElementById('btn-cancel-upload')?.addEventListener('click', closeUploadModal);
-
-  [document.getElementById('btn-trigger-upload'), document.getElementById('upload-preview-box')].forEach(btn => {
-    btn?.addEventListener('click', () => input.click());
-  });
-
-  input.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      tempImageBase64 = ev.target.result;
-      const img = document.getElementById('upload-preview-img');
-      const ph = document.getElementById('upload-icon-placeholder');
-      if (img) { img.src = tempImageBase64; img.style.display = 'block'; }
-      if (ph) ph.style.display = 'none';
-    };
-    reader.readAsDataURL(file);
-  });
-
-  document.getElementById('save-image-btn')?.addEventListener('click', () => {
-    if (currentTargetCode && tempImageBase64) {
-      const idx = mockPlants.findIndex(p => p.code === currentTargetCode);
-      if (idx !== -1) {
-        mockPlants[idx].bgImage = tempImageBase64;
-        savePlants();
-        renderPlantGrid();
-      }
-    }
-    closeUploadModal();
-  });
-}
 
 // ==========================================
 // PLANT MODAL (ADD / EDIT)
@@ -332,12 +260,17 @@ function handlePlantFormSubmit() {
     company = document.getElementById('plant-company-other').value.trim();
   }
 
-  // Validate all required fields
-  if (!name) { alert('Nama Plant wajib diisi!'); return; }
-  if (!company || company === '') { alert('Perusahaan wajib dipilih!'); return; }
+  // Validate required fields
+  if (!name) { alert('Nama Area/Lokasi wajib diisi!'); return; }
+  if (!company || company === '' || company === 'Pilih Perusahaan') { alert('Perusahaan wajib dipilih!'); return; }
   if (!address) { alert('Alamat wajib diisi!'); return; }
   if (!owner) { alert('Pemilik Area wajib diisi!'); return; }
-  if (!isEdit && !layoutFile) { alert('Gambar Lay Out wajib diupload untuk plant baru!'); return; }
+
+  // Validate file size (5 MB max)
+  if (layoutFile && layoutFile.size > 5 * 1024 * 1024) {
+    alert('Ukuran gambar melebihi batas 5 MB. Harap pilih gambar yang lebih kecil.');
+    return;
+  }
 
   const saveData = (imageStr) => {
     if (isEdit) {
@@ -350,18 +283,31 @@ function handlePlantFormSubmit() {
         if (imageStr) mockPlants[idx].bgImage = imageStr;
       }
     } else {
-      mockPlants.push({ code, name, company, location: address, owner, bgImage: imageStr });
+      mockPlants.push({ code, name, company, location: address, owner, bgImage: imageStr || null });
     }
-    savePlants();
+    try {
+      savePlants();
+    } catch(e) {
+      // localStorage quota exceeded — save without image
+      if (isEdit) {
+        const idx = mockPlants.findIndex(p => p.code === code);
+        if (idx !== -1) mockPlants[idx].bgImage = null;
+      } else {
+        mockPlants[mockPlants.length - 1].bgImage = null;
+      }
+      savePlants();
+      alert('Gambar terlalu besar untuk disimpan, data Area/Lokasi tetap tersimpan tanpa gambar.');
+    }
     renderPlantGrid();
     document.getElementById('plant-modal').classList.remove('show');
-    alert(isEdit ? 'Perubahan berhasil disimpan!' : 'Plant berhasil diregistrasi!');
+    if (!isEdit) alert('Area/Lokasi baru berhasil diregistrasi!');
+    else alert('Perubahan berhasil disimpan!');
   };
 
   if (layoutFile) {
     const reader = new FileReader();
     reader.onload = (ev) => saveData(ev.target.result);
-    reader.onerror = () => alert('Gagal membaca file gambar!');
+    reader.onerror = () => alert('Gagal membaca file gambar! Coba gunakan file lain.');
     reader.readAsDataURL(layoutFile);
   } else {
     saveData(null);
@@ -418,11 +364,11 @@ window.openPlantModal = function(code) {
     }
   } else {
     // === ADD MODE ===
-    title.textContent = 'Registrasi Plant';
+    title.textContent = 'Registrasi Area/Lokasi';
     isEditInput.value = 'false';
     const randomNum = Math.floor(Math.random() * 90000 + 10000).toString();
     codeInput.value = `PLT-${randomNum}`;
-    submitBtn.textContent = 'Registrasi Plant';
+    submitBtn.textContent = 'Registrasi Area/Lokasi';
   }
 
   document.getElementById('plant-modal').classList.add('show');

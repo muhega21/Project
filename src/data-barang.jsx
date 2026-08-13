@@ -26,7 +26,21 @@ const INITIAL_INVENTORY = [
 ];
 
 function DataBarang() {
-  const [inventory, setInventory] = useState(INITIAL_INVENTORY);
+  const [inventory, setInventory] = useState(() => {
+    const saved = localStorage.getItem('maintainx_inventory');
+    if (saved) return JSON.parse(saved);
+    localStorage.setItem('maintainx_inventory', JSON.stringify(INITIAL_INVENTORY));
+    return INITIAL_INVENTORY;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('maintainx_inventory', JSON.stringify(inventory));
+    } catch (error) {
+      console.error("Failed to save inventory to localStorage:", error);
+      alert("Gagal menyimpan data: Penyimpanan lokal penuh (gambar terlalu besar).");
+    }
+  }, [inventory]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCriteria, setSearchCriteria] = useState('Semua'); 
   const [filterGudang, setFilterGudang] = useState('');
@@ -148,9 +162,37 @@ function DataBarang() {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Ukuran gambar maksimal 10MB!');
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, image: reader.result }));
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          const MAX_DIMENSION = 800;
+          if (width > height && width > MAX_DIMENSION) {
+            height *= MAX_DIMENSION / width;
+            width = MAX_DIMENSION;
+          } else if (height > MAX_DIMENSION) {
+            width *= MAX_DIMENSION / height;
+            height = MAX_DIMENSION;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Compress image to base64 JPEG
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          setFormData(prev => ({ ...prev, image: compressedBase64 }));
+        };
+        img.src = reader.result;
       };
       reader.readAsDataURL(file);
     }
@@ -254,82 +296,100 @@ function DataBarang() {
         </div>
         
         <div className="overflow-y-auto flex-1 custom-scrollbar print:overflow-visible">
-          <table className="w-full text-left text-sm whitespace-nowrap print:text-black">
-            <thead className="bg-bg-dark text-text-secondary border-b border-border-color sticky top-0 z-10 print:static print:bg-gray-100 print:text-black print:border-black">
-              <tr>
-                <th className="px-4 py-3 font-medium w-10 print:hidden">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedIds.length > 0 && selectedIds.length === filteredInventory.length}
-                    onChange={toggleSelectAll}
-                    className="rounded border-gray-600 bg-gray-700 text-accent focus:ring-[#FF7043]"
-                  />
-                </th>
-                <th className="px-4 py-3 font-medium">No</th>
-                <th className="px-4 py-3 font-medium">Kode Barang</th>
-                <th className="px-4 py-3 font-medium">Nama Barang</th>
-                <th className="px-4 py-3 font-medium">Satuan</th>
-                <th className="px-4 py-3 font-medium">Jenis Barang</th>
-                <th className="px-4 py-3 font-medium text-center">Stok Min</th>
-                <th className="px-4 py-3 font-medium text-center">Stok</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800 print:divide-gray-300">
-              {filteredInventory.map((item, index) => {
-                const isSelected = selectedIds.includes(item.id);
-                return (
-                  <tr 
-                    key={item.id} 
-                    onClick={() => toggleSelect(item.id)}
-                    className={`transition-colors print:border-b print:border-gray-200 cursor-pointer ${isSelected ? 'bg-btn-secondary/80 border-l-2 border-l-[#FF7043]' : 'hover:bg-btn-secondary/40 border-l-2 border-l-transparent'}`}
-                  >
-                    <td className="px-4 py-3 print:hidden">
-                      <input 
-                        type="checkbox" 
-                        checked={isSelected}
-                        onChange={() => {}} // Handled by tr onClick
-                        onClick={(e) => e.stopPropagation()} // Prevent double trigger
-                        className="rounded border-gray-600 bg-gray-700 text-accent focus:ring-[#FF7043] pointer-events-none"
-                      />
-                    </td>
-                    <td className="px-4 py-3 font-mono font-medium text-text-secondary print:text-black">{index + 1}</td>
-                    <td className="px-4 py-3 font-mono text-blue-400 font-medium print:text-blue-700">
-                      <span 
-                        className="cursor-pointer hover:underline hover:text-blue-300"
-                        onClick={(e) => {
-                          e.stopPropagation(); // prevent row selection toggle
-                          openEditModalForId(item.id);
-                        }}
-                      >
-                        {item.id}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-text-primary font-medium print:text-black">{item.name}</td>
-                    <td className="px-4 py-3 text-text-secondary print:text-black">{item.unit}</td>
-                    <td className="px-4 py-3 text-text-secondary print:text-black">
-                      <span className="px-2 py-0.5 bg-bg-dark border border-border-color rounded text-xs print:bg-transparent print:border-none print:p-0">
-                        {item.type}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center text-text-secondary print:text-black">{item.min}</td>
-                    <td className="px-4 py-3 text-center font-bold text-text-primary print:text-black">
-                      {item.qty}
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-bg-dark text-text-secondary border-b border-border-color print:bg-gray-100 print:text-black">
+                <tr>
+                  <th className="px-4 py-3 w-10 print:hidden">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedIds.length > 0 && selectedIds.length === filteredInventory.length}
+                      onChange={toggleSelectAll}
+                      className="rounded border-gray-600 bg-gray-700 text-accent focus:ring-[#FF7043]"
+                    />
+                  </th>
+                  <th className="px-4 py-3 font-medium">No</th>
+                  <th className="px-4 py-3 font-medium">Gambar</th>
+                  <th className="px-4 py-3 font-medium">Kode Barang</th>
+                  <th className="px-4 py-3 font-medium">Nama Barang</th>
+                  <th className="px-4 py-3 font-medium">Jenis Barang</th>
+                  <th className="px-4 py-3 font-medium">Kegunaan</th>
+                  <th className="px-4 py-3 font-medium">Spesifikasi</th>
+                  <th className="px-4 py-3 font-medium">Satuan</th>
+                  <th className="px-4 py-3 font-medium text-center">Stok Min</th>
+                  <th className="px-4 py-3 font-medium text-center">Jumlah</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800 print:divide-gray-300">
+                {filteredInventory.map((item, index) => {
+                  const isSelected = selectedIds.includes(item.id);
+                  return (
+                    <tr 
+                      key={item.id} 
+                      onClick={() => toggleSelect(item.id)}
+                      className={`transition-colors print:border-b print:border-gray-200 cursor-pointer ${isSelected ? 'bg-btn-secondary/80 border-l-2 border-l-[#FF7043]' : 'hover:bg-btn-secondary/40 border-l-2 border-l-transparent'}`}
+                    >
+                      <td className="px-4 py-3 print:hidden">
+                        <input 
+                          type="checkbox" 
+                          checked={isSelected}
+                          onChange={() => {}} // Handled by tr onClick
+                          onClick={(e) => e.stopPropagation()} // Prevent double trigger
+                          className="rounded border-gray-600 bg-gray-700 text-accent focus:ring-[#FF7043] pointer-events-none"
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-mono font-medium text-text-secondary print:text-black">{index + 1}</td>
+                      <td className="px-4 py-3">
+                        <div className="w-10 h-10 rounded overflow-hidden bg-bg-dark border border-border-color flex items-center justify-center">
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xs text-text-secondary">N/A</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-blue-400 font-medium print:text-blue-700">
+                        <span 
+                          className="cursor-pointer hover:underline hover:text-blue-300"
+                          onClick={(e) => {
+                            e.stopPropagation(); // prevent row selection toggle
+                            openEditModalForId(item.id);
+                          }}
+                        >
+                          {item.id}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-text-primary font-medium print:text-black">{item.name}</td>
+                      <td className="px-4 py-3 text-text-secondary print:text-black">
+                        <span className="px-2 py-0.5 bg-bg-dark border border-border-color rounded text-xs print:bg-transparent print:border-none print:p-0">
+                          {item.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary print:text-black text-xs truncate max-w-[120px]" title={item.usage}>
+                        {item.usage}
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary print:text-black text-xs truncate max-w-[150px]" title={item.spec}>
+                        {item.spec || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary print:text-black">{item.unit}</td>
+                      <td className="px-4 py-3 text-center text-text-secondary print:text-black">{item.min}</td>
+                      <td className="px-4 py-3 text-center font-bold text-text-primary print:text-black">
+                        {item.qty}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredInventory.length === 0 && (
+                  <tr>
+                    <td colSpan="11" className="px-4 py-12 text-center text-text-secondary">
+                      <div className="flex flex-col items-center justify-center">
+                        <AlertCircle size={32} className="mb-2 opacity-50" />
+                        <p>Tidak ada data barang yang sesuai dengan kriteria pencarian.</p>
+                      </div>
                     </td>
                   </tr>
-                );
-              })}
-              {filteredInventory.length === 0 && (
-                <tr>
-                  <td colSpan="8" className="px-4 py-12 text-center text-text-secondary">
-                    <div className="flex flex-col items-center justify-center">
-                      <AlertCircle size={32} className="mb-2 opacity-50" />
-                      <p>Tidak ada data barang yang sesuai dengan kriteria pencarian.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
         </div>
       </div>
 
@@ -407,7 +467,7 @@ function DataBarang() {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-text-secondary flex justify-between items-center h-4">
                         <span>Stok Min</span>
@@ -420,6 +480,21 @@ function DataBarang() {
                           }
                         }}
                         value={formData.min} onChange={e => setFormData({...formData, min: parseInt(e.target.value || 0)})}
+                        className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043]" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-text-secondary flex justify-between items-center h-4">
+                        <span>Jumlah</span>
+                      </label>
+                      <input 
+                        type="number" min="0" required
+                        onKeyDown={(e) => {
+                          if (['e', 'E', '+', '-', '.'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        value={formData.qty} onChange={e => setFormData({...formData, qty: parseInt(e.target.value || 0)})}
                         className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043]" 
                       />
                     </div>
@@ -493,7 +568,7 @@ function DataBarang() {
                       ) : (
                         <>
                           <Upload size={24} className="text-text-secondary mb-2" />
-                          <span className="text-xs text-text-secondary text-center">Klik untuk memilih gambar<br/>(Max 2MB)</span>
+                          <span className="text-xs text-text-secondary text-center">Klik untuk memilih gambar<br/>(Max 10MB)</span>
                         </>
                       )}
                       <input 

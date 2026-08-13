@@ -51,7 +51,7 @@ function Warehouse() {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const pendingSparepartRequests = logisticRequests.filter(r => r.type === 'Barang / Sparepart' && r.status === 'Pending Approval');
+  const pendingSparepartRequests = logisticRequests.filter(r => r.type === 'Barang / Sparepart' && r.status === 'Waiting for Approval');
 
   const approveRequest = (id) => {
     const updatedReqs = logisticRequests.map(r => {
@@ -623,22 +623,39 @@ function Warehouse() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
-                      {/* Normally this would map over an array of items, but right now logistic request only sends one item */}
-                      <tr className="hover:bg-btn-secondary/40 transition-colors">
-                        <td className="px-4 py-3 text-text-secondary">1</td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium">{selectedRequestDetail.item}</div>
-                          <div className="text-xs text-text-secondary">Barang Umum</div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className="font-bold bg-btn-secondary px-2 py-1 rounded">{selectedRequestDetail.quantity}</span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <button className="text-red-500 hover:text-red-400 p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 transition-colors" title="Hapus Barang">
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
+                      {selectedRequestDetail.items ? selectedRequestDetail.items.map((it, idx) => (
+                        <tr key={it.id || idx} className="hover:bg-btn-secondary/40 transition-colors">
+                          <td className="px-4 py-3 text-text-secondary">{idx + 1}</td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{it.name}</div>
+                            <div className="text-xs text-text-secondary">{it.id}</div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="font-bold bg-btn-secondary px-2 py-1 rounded">{it.qty}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <button className="text-red-500 hover:text-red-400 p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 transition-colors" title="Hapus Barang">
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr className="hover:bg-btn-secondary/40 transition-colors">
+                          <td className="px-4 py-3 text-text-secondary">1</td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{selectedRequestDetail.item}</div>
+                            <div className="text-xs text-text-secondary">{selectedRequestDetail.type}</div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="font-bold bg-btn-secondary px-2 py-1 rounded">{selectedRequestDetail.quantity}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <button className="text-red-500 hover:text-red-400 p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 transition-colors" title="Hapus Barang">
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

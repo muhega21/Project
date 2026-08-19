@@ -1,31 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
-  Package, Search, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, X, RefreshCw, Image as ImageIcon, Database, ArrowLeftRight, HelpCircle, List, Printer, Bell, Eye, User, Trash2, CheckCircle, XCircle, Plus
+  Package, Search, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, X, RefreshCw, Image as ImageIcon, Database, ArrowLeftRight, HelpCircle, List, Printer, Bell, Eye, User, Trash2, CheckCircle, XCircle, Plus, Wrench, Clock, Activity, HardHat
 } from 'lucide-react';
 
-const INITIAL_INVENTORY = [
-  { id: 'SKU-001', name: 'Filter Oli Mesin', qty: 9, min: 10, unit: 'pcs', type: 'Consumable', image: 'https://images.unsplash.com/photo-1635339243765-b1a065bba438?auto=format&fit=crop&w=300&q=80', gudang: 'Gudang Utama' },
-  { id: 'SKU-002', name: 'Pelumas Hidrolik 50L', qty: 3, min: 5, unit: 'drum', type: 'Liquid/Chemical', image: 'https://images.unsplash.com/photo-1598207951491-255eaf139751?auto=format&fit=crop&w=300&q=80', gudang: 'Gudang Sparepart' },
-  { id: 'SKU-003', name: 'Bantalan Rol (Bearing) 20mm', qty: 15, min: 20, unit: 'pcs', type: 'Mechanical', image: 'https://images.unsplash.com/photo-1590217983057-0a3eb2d8ce2f?auto=format&fit=crop&w=300&q=80', gudang: 'Gudang Utama' },
-  { id: 'SKU-004', name: 'Kabel Tembaga 2.5mm', qty: 100, min: 50, unit: 'meter', type: 'Electrical', image: 'https://images.unsplash.com/photo-1558231908-04fc5ebccffc?auto=format&fit=crop&w=300&q=80', gudang: 'Gudang Utama' },
-  { id: 'SKU-005', name: 'Sensor Suhu PT100', qty: 1, min: 2, unit: 'pcs', type: 'Instrument', image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=300&q=80', gudang: 'Gudang Sparepart' },
-  { id: 'SKU-006', name: 'Gasket Pipa 4 inch', qty: 4, min: 10, unit: 'pcs', type: 'Mechanical', image: 'https://images.unsplash.com/photo-1597843796515-d72b535d8e7d?auto=format&fit=crop&w=300&q=80', gudang: 'Gudang Utama' }
+const FALLBACK_INVENTORY = [
+  { id: 'SKU-001', name: 'Filter Oli Mesin', qty: 9, min: 10, unit: 'pcs', type: 'Consumable', image: '', gudang: 'Gudang Utama' }
 ];
 
 function Warehouse() {
-  const [inventory, setInventory] = useState(INITIAL_INVENTORY);
+  const [inventory, setInventory] = useState(() => {
+    const saved = localStorage.getItem('maintainx_inventory');
+    return saved ? JSON.parse(saved) : FALLBACK_INVENTORY;
+  });
+  const [warehouses, setWarehouses] = useState(() => {
+    const saved = localStorage.getItem('maintainx_warehouses');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [transactions, setTransactions] = useState(() => {
+    const saved = localStorage.getItem('maintainx_transactions');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [tools, setTools] = useState(() => {
+    const saved = localStorage.getItem('maintainx_tools');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [logisticRequests, setLogisticRequests] = useState(() => {
+    const savedReqs = localStorage.getItem('maintainx_logistic_requests');
+    return savedReqs ? JSON.parse(savedReqs) : [];
+  });
+
   const [selectedItemDetail, setSelectedItemDetail] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Mock transaction stats
-  const [stats] = useState({ masuk: 124, keluar: 89 });
   const [viewMode, setViewMode] = useState('table');
   const [modalItem, setModalItem] = useState(null);
-  
-  // Logistic requests state
-  const [logisticRequests, setLogisticRequests] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedRequestDetail, setSelectedRequestDetail] = useState(null);
 
@@ -38,18 +48,38 @@ function Warehouse() {
   }, [inventory, selectedItemDetail]);
 
   useEffect(() => {
-    const savedReqs = localStorage.getItem('maintainx_logistic_requests');
-    if (savedReqs) {
-      setLogisticRequests(JSON.parse(savedReqs));
-    }
     const handleStorage = (e) => {
       if (e.key === 'maintainx_logistic_requests') {
         setLogisticRequests(JSON.parse(e.newValue || '[]'));
+      }
+      if (e.key === 'maintainx_inventory') {
+        setInventory(JSON.parse(e.newValue || '[]'));
+      }
+      if (e.key === 'maintainx_warehouses') {
+        setWarehouses(JSON.parse(e.newValue || '[]'));
+      }
+      if (e.key === 'maintainx_transactions') {
+        setTransactions(JSON.parse(e.newValue || '[]'));
+      }
+      if (e.key === 'maintainx_tools') {
+        setTools(JSON.parse(e.newValue || '[]'));
       }
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
+
+  // Calculated Stats
+  const stats = useMemo(() => {
+    const totalBarang = inventory.reduce((acc, curr) => acc + (curr.qty || 0), 0);
+    const masuk = transactions.filter(t => t.type === 'in').reduce((acc, curr) => acc + (curr.qty || 0), 0);
+    const keluar = transactions.filter(t => t.type === 'out').reduce((acc, curr) => acc + (curr.qty || 0), 0);
+    const totalGudang = warehouses.length;
+    const totalAlat = tools.reduce((acc, curr) => acc + (curr.qty || 1), 0);
+    const alatTersedia = tools.filter(t => t.status === 'Available' || t.status === 'Baik').reduce((acc, curr) => acc + (curr.qty || 1), 0);
+    
+    return { totalBarang, masuk, keluar, totalGudang, totalAlat, alatTersedia };
+  }, [inventory, transactions, warehouses, tools]);
 
   const pendingSparepartRequests = logisticRequests.filter(r => r.type === 'Barang / Sparepart' && r.status === 'Waiting for Approval');
 
@@ -69,12 +99,15 @@ function Warehouse() {
     setTimeout(() => {
       setIsRefreshing(false);
       // Reload logic here if connected to real API
-      
-      // Reload logistic requests
-      const stored = localStorage.getItem('maintainx_logistic_requests');
-      if (stored) {
-        setLogisticRequests(JSON.parse(stored));
-      }
+      const load = (key, setter) => {
+        const stored = localStorage.getItem(key);
+        if (stored) setter(JSON.parse(stored));
+      };
+      load('maintainx_logistic_requests', setLogisticRequests);
+      load('maintainx_inventory', setInventory);
+      load('maintainx_warehouses', setWarehouses);
+      load('maintainx_transactions', setTransactions);
+      load('maintainx_tools', setTools);
     }, 800);
   };
 
@@ -162,76 +195,99 @@ function Warehouse() {
   return (
     <div className="flex flex-col h-full gap-4 text-text-primary font-sans">
       
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/* Overview Cards (Redesigned) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         
-        {/* Total Barang Masuk */}
-        <button onClick={() => window.location.href = 'transaksi-gudang.html?filterTipe=in'} className="bg-bg-surface pt-4 px-4 pb-2 rounded-xl border border-border-color shadow flex flex-col hover:bg-btn-secondary transition-colors text-left cursor-pointer group">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center shrink-0">
-              <ArrowDownToLine size={20} />
+        {/* Total Barang */}
+        <button onClick={() => window.location.href = 'data-barang.html'} className="bg-bg-surface p-4 rounded-xl border border-border-color shadow flex flex-col hover:bg-btn-secondary transition-all text-left cursor-pointer group hover:border-blue-500/30">
+          <div className="flex items-start justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0">
+              <Package size={18} />
             </div>
-            <div>
-              <div className="text-text-secondary text-xs font-medium group-hover:text-text-primary transition-colors">Total Barang Masuk</div>
-              <div className="text-xl font-bold text-text-primary leading-tight flex items-center gap-2">{stats.masuk} <span className="text-[10px] font-normal text-green-500 bg-green-500/20 px-1.5 py-0.5 rounded-full border border-green-500/30">+12%</span></div>
+            <ArrowLeftRight size={14} className="text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div>
+            <div className="text-xl font-bold text-text-primary leading-tight">{stats.totalBarang}</div>
+            <div className="text-text-secondary text-[11px] font-medium group-hover:text-blue-400 transition-colors mt-0.5">Total Stok Fisik</div>
+          </div>
+        </button>
+
+        {/* Total Gudang */}
+        <button onClick={() => window.location.href = 'data-gudang.html'} className="bg-bg-surface p-4 rounded-xl border border-border-color shadow flex flex-col hover:bg-btn-secondary transition-all text-left cursor-pointer group hover:border-purple-500/30">
+          <div className="flex items-start justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-500 flex items-center justify-center shrink-0">
+              <Database size={18} />
+            </div>
+            <ArrowLeftRight size={14} className="text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div>
+            <div className="text-xl font-bold text-text-primary leading-tight">{stats.totalGudang}</div>
+            <div className="text-text-secondary text-[11px] font-medium group-hover:text-purple-400 transition-colors mt-0.5">Gudang Aktif</div>
+          </div>
+        </button>
+
+        {/* Total Barang Masuk */}
+        <button onClick={() => window.location.href = 'transaksi-gudang.html?filterTipe=in'} className="bg-bg-surface p-4 rounded-xl border border-border-color shadow flex flex-col hover:bg-btn-secondary transition-all text-left cursor-pointer group hover:border-green-500/30 relative overflow-hidden">
+          <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity"><ArrowDownToLine size={80} /></div>
+          <div className="flex items-start justify-between mb-2 relative z-10">
+            <div className="w-8 h-8 rounded-lg bg-green-500/20 text-green-500 flex items-center justify-center shrink-0">
+              <ArrowDownToLine size={18} />
             </div>
           </div>
-          <div className="w-full h-10 mt-3 opacity-70 group-hover:opacity-100 transition-opacity">
-            <svg viewBox="0 0 100 30" className="w-full h-full overflow-visible" preserveAspectRatio="none">
-              <path d="M0,25 L15,22 L30,28 L45,15 L60,18 L75,10 L90,12 L100,5" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M0,25 L15,22 L30,28 L45,15 L60,18 L75,10 L90,12 L100,5 L100,30 L0,30 Z" fill="url(#grad-green)" opacity="0.2"/>
-              <defs>
-                <linearGradient id="grad-green" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#22c55e" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-            </svg>
+          <div className="relative z-10">
+            <div className="text-xl font-bold text-text-primary leading-tight flex items-end gap-1">
+              {stats.masuk} <span className="text-[10px] font-normal text-green-500 bg-green-500/10 px-1 py-0.5 rounded-full mb-1">Pcs</span>
+            </div>
+            <div className="text-text-secondary text-[11px] font-medium group-hover:text-green-400 transition-colors mt-0.5">Total Masuk</div>
           </div>
         </button>
 
         {/* Total Barang Keluar */}
-        <button onClick={() => window.location.href = 'transaksi-gudang.html?filterTipe=out'} className="bg-bg-surface pt-4 px-4 pb-2 rounded-xl border border-border-color shadow flex flex-col hover:bg-btn-secondary transition-colors text-left cursor-pointer group">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center shrink-0">
-              <ArrowUpFromLine size={20} />
-            </div>
-            <div>
-              <div className="text-text-secondary text-xs font-medium group-hover:text-text-primary transition-colors">Total Barang Keluar</div>
-              <div className="text-xl font-bold text-text-primary leading-tight flex items-center gap-2">{stats.keluar} <span className="text-[10px] font-normal text-red-500 bg-red-500/20 px-1.5 py-0.5 rounded-full border border-red-500/30">-5.2%</span></div>
+        <button onClick={() => window.location.href = 'transaksi-gudang.html?filterTipe=out'} className="bg-bg-surface p-4 rounded-xl border border-border-color shadow flex flex-col hover:bg-btn-secondary transition-all text-left cursor-pointer group hover:border-orange-500/30 relative overflow-hidden">
+          <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity"><ArrowUpFromLine size={80} /></div>
+          <div className="flex items-start justify-between mb-2 relative z-10">
+            <div className="w-8 h-8 rounded-lg bg-orange-500/20 text-orange-500 flex items-center justify-center shrink-0">
+              <ArrowUpFromLine size={18} />
             </div>
           </div>
-          <div className="w-full h-10 mt-3 opacity-70 group-hover:opacity-100 transition-opacity">
-            <svg viewBox="0 0 100 30" className="w-full h-full overflow-visible" preserveAspectRatio="none">
-              <path d="M0,5 L15,12 L30,8 L45,18 L60,15 L75,22 L90,18 L100,25" fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M0,5 L15,12 L30,8 L45,18 L60,15 L75,22 L90,18 L100,25 L100,30 L0,30 Z" fill="url(#grad-orange)" opacity="0.2"/>
-              <defs>
-                <linearGradient id="grad-orange" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f97316" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-            </svg>
+          <div className="relative z-10">
+            <div className="text-xl font-bold text-text-primary leading-tight flex items-end gap-1">
+              {stats.keluar} <span className="text-[10px] font-normal text-orange-500 bg-orange-500/10 px-1 py-0.5 rounded-full mb-1">Pcs</span>
+            </div>
+            <div className="text-text-secondary text-[11px] font-medium group-hover:text-orange-400 transition-colors mt-0.5">Total Keluar</div>
           </div>
         </button>
 
-        {/* Total Semua Barang */}
-        <button onClick={() => window.location.href = 'data-barang.html'} className="bg-bg-surface p-4 rounded-xl border border-border-color shadow flex items-center gap-3 hover:bg-btn-secondary transition-colors text-left cursor-pointer group">
-          <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 group-hover:bg-blue-500/40 transition-colors">
-            <Package size={20} />
+        {/* Perkakas / Alat */}
+        <button onClick={() => window.location.href = 'perkakas.html'} className="bg-bg-surface p-4 rounded-xl border border-border-color shadow flex flex-col hover:bg-btn-secondary transition-all text-left cursor-pointer group hover:border-cyan-500/30">
+          <div className="flex items-start justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-500 flex items-center justify-center shrink-0">
+              <Wrench size={18} />
+            </div>
           </div>
           <div>
-            <div className="text-text-secondary text-xs font-medium group-hover:text-text-primary transition-colors">Total Semua Barang</div>
-            <div className="text-xl font-bold text-text-primary leading-tight">{inventory.reduce((acc, curr) => acc + curr.qty, 0)}</div>
+            <div className="text-xl font-bold text-text-primary leading-tight">{stats.alatTersedia} <span className="text-sm font-normal text-text-secondary">/ {stats.totalAlat}</span></div>
+            <div className="text-text-secondary text-[11px] font-medium group-hover:text-cyan-400 transition-colors mt-0.5">Alat Tersedia</div>
           </div>
         </button>
 
-        {/* View Toggle */}
-        <button onClick={() => setViewMode(viewMode === 'table' ? 'grid' : 'table')} className="bg-bg-surface p-4 rounded-xl border border-border-color shadow flex items-center justify-center gap-2 hover:bg-btn-secondary transition-colors group cursor-pointer">
-          <div className="w-8 h-8 rounded bg-gray-700/50 text-text-secondary group-hover:text-text-primary group-hover:bg-[#FF7043] flex items-center justify-center transition-colors">
-            {viewMode === 'table' ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> : <List size={18}/>}
+        {/* Permintaan Tertunda */}
+        <button onClick={() => setShowNotifications(true)} className="bg-bg-surface p-4 rounded-xl border border-border-color shadow flex flex-col hover:bg-btn-secondary transition-all text-left cursor-pointer group hover:border-red-500/30 relative">
+          <div className="flex items-start justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-500 flex items-center justify-center shrink-0">
+              <Clock size={18} />
+            </div>
+            {pendingSparepartRequests.length > 0 && (
+              <span className="flex h-3 w-3 absolute top-3 right-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+            )}
           </div>
-          <span className="font-semibold text-text-secondary group-hover:text-text-primary transition-colors">{viewMode === 'table' ? 'Menu Grid' : 'Menu Table'}</span>
+          <div>
+            <div className="text-xl font-bold text-text-primary leading-tight">{pendingSparepartRequests.length}</div>
+            <div className="text-text-secondary text-[11px] font-medium group-hover:text-red-400 transition-colors mt-0.5">Permintaan Tertunda</div>
+          </div>
         </button>
 
       </div>
@@ -331,12 +387,25 @@ function Warehouse() {
           >
             <ArrowLeftRight size={18} /> Transaksi Barang
           </a>
+          <a 
+            href="/perkakas.html"
+            className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg transition-colors"
+          >
+            <Wrench size={18} /> Perkakas
+          </a>
+          <button 
+            onClick={() => setViewMode(viewMode === 'table' ? 'grid' : 'table')}
+            className="bg-bg-dark border border-border-color hover:bg-btn-secondary text-text-secondary px-3 py-2 rounded-lg transition-colors focus:outline-none"
+            title="Ganti Mode Tampilan"
+          >
+            {viewMode === 'table' ? <List size={20} /> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>}
+          </button>
           <button 
             onClick={handlePrint}
-            className="bg-gray-700 hover:bg-gray-600 text-text-primary px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg transition-colors ml-2 border border-gray-600"
+            className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg transition-colors ml-2 border border-gray-600"
             title="Cetak Data Kritis"
           >
-            <Printer size={18} className="text-text-secondary" /> Cetak
+            <Printer size={18} /> Cetak
           </button>
         </div>
       </div>

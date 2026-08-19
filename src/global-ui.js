@@ -93,8 +93,12 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
     // --- Language Toggle Item ---
-    const flags = { 'ID': '🇮🇩', 'EN': '🇺🇸', 'CN': '🇨🇳' };
+    const flags = { 'ID': '🇮🇩', 'US': '🇺🇸', 'CN': '🇨🇳' };
+    const gtCodes = { 'ID': 'id', 'US': 'en', 'CN': 'zh-CN' };
     
+    let currentLang = localStorage.getItem('maintainx_lang') || 'ID';
+    if (currentLang === 'EN') currentLang = 'US'; // Migration from old code
+
     const langItem = createMenuItem(
       `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`,
       'Ganti Bahasa',
@@ -103,9 +107,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Cycle through languages
         const langCodes = Object.keys(flags);
         let currentIndex = langCodes.indexOf(currentLang);
-        currentLang = langCodes[(currentIndex + 1) % langCodes.length];
-        localStorage.setItem('maintainx_lang', currentLang);
-        el.querySelector('.lang-indicator').innerHTML = flags[currentLang];
+        const nextLang = langCodes[(currentIndex + 1) % langCodes.length];
+        
+        localStorage.setItem('maintainx_lang', nextLang);
+        
+        // Update Google Translate Cookie
+        const targetLang = gtCodes[nextLang];
+        if (nextLang === 'ID') {
+           document.cookie = "googtrans=/id/id; path=/";
+           document.cookie = "googtrans=/id/id; domain=" + window.location.hostname + "; path=/";
+        } else {
+           document.cookie = "googtrans=/id/" + targetLang + "; path=/";
+           document.cookie = "googtrans=/id/" + targetLang + "; domain=" + window.location.hostname + "; path=/";
+        }
+        
+        el.querySelector('.lang-indicator').innerHTML = flags[nextLang];
+        window.location.reload();
       }
     );
 
@@ -176,4 +193,50 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  // 7. Inject Google Translate for Dynamic Translations
+  const injectGoogleTranslate = () => {
+    // Sync cookie on load to ensure it matches localStorage state
+    const gtCodesInit = { 'ID': 'id', 'US': 'en', 'CN': 'zh-CN' };
+    let cLang = localStorage.getItem('maintainx_lang') || 'ID';
+    if (cLang === 'EN') cLang = 'US';
+    const targetLang = gtCodesInit[cLang];
+    
+    if (cLang === 'ID') {
+       document.cookie = "googtrans=/id/id; path=/";
+       document.cookie = "googtrans=/id/id; domain=" + window.location.hostname + "; path=/";
+    } else {
+       document.cookie = "googtrans=/id/" + targetLang + "; path=/";
+       document.cookie = "googtrans=/id/" + targetLang + "; domain=" + window.location.hostname + "; path=/";
+    }
+
+    const gtDiv = document.createElement('div');
+    gtDiv.id = 'google_translate_element';
+    gtDiv.style.display = 'none';
+    document.body.appendChild(gtDiv);
+
+    window.googleTranslateElementInit = function() {
+      new window.google.translate.TranslateElement({
+        pageLanguage: 'id',
+        includedLanguages: 'id,en,zh-CN',
+        autoDisplay: false
+      }, 'google_translate_element');
+    };
+
+    const gtScript = document.createElement('script');
+    gtScript.type = 'text/javascript';
+    gtScript.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    document.head.appendChild(gtScript);
+
+    const style = document.createElement('style');
+    style.innerHTML = `
+      body { top: 0 !important; }
+      .skiptranslate, #goog-gt-tt { display: none !important; }
+      .goog-te-banner-frame { display: none !important; }
+      /* Prevent React errors by hiding GT elements rather than them altering DOM structure too much */
+    `;
+    document.head.appendChild(style);
+  };
+
+  injectGoogleTranslate();
 });

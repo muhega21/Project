@@ -1,15 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  Plus, X, Search, ChevronDown, ClipboardList, Trash2, Edit2, Check
+  Plus, X, Search, ChevronDown, ClipboardList, Trash2, Edit2, Check, Save
 } from 'lucide-react';
 
 const FREQUENCY_OPTIONS = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semester', 'Annual', 'Trienial', 'Quinquenial'];
 
+// Generate ID Task with P- (Preventive) or C- (Corrective) prefix
+const genTaskId = (type) => {
+  const prefix = type === 'Corrective' ? 'C' : 'P';
+  return `${prefix}-${Date.now().toString().slice(-5)}`;
+};
+
 const INITIAL_PLANS = [
-  { id: 'MP-001', areaId: 'AREA-01', areaName: 'Lantai Produksi', assetId: 'EQ-1001', assetName: 'Pompa Distribusi', taskDescription: 'Pemeriksaan pelumasan dan kebocoran', frequency: 'Monthly', startDate: '2026-08-01', nextDate: '2026-09-01', pic: 'Budi Santoso', status: 'Active' },
-  { id: 'MP-002', areaId: 'AREA-02', areaName: 'Ruang Boiler', assetId: 'EQ-1005', assetName: 'Boiler Utama', taskDescription: 'Pengecekan tekanan dan overhaul tahunan', frequency: 'Annual', startDate: '2026-01-15', nextDate: '2027-01-15', pic: 'Agus Setiawan', status: 'Active' },
-  { id: 'MP-003', areaId: 'AREA-01', areaName: 'Lantai Produksi', assetId: 'EQ-1010', assetName: 'Filter RO', taskDescription: 'Penggantian membran filter', frequency: 'Weekly', startDate: '2026-08-04', nextDate: '2026-08-11', pic: 'Joko Widodo', status: 'Active' },
+  { id: 'P-00001', taskType: 'Preventive', plantCode: 'AREA-01', areaId: 'AREA-01', areaName: 'Lantai Produksi', assetId: 'EQ-1001', assetName: 'Pompa Distribusi', taskDescription: 'Pemeriksaan pelumasan dan kebocoran', frequency: 'Monthly', startDate: '2026-08-01', nextDate: '2026-09-01', pic: 'Budi Santoso', status: 'Active' },
+  { id: 'P-00002', taskType: 'Preventive', plantCode: 'AREA-02', areaId: 'AREA-02', areaName: 'Ruang Boiler', assetId: 'EQ-1005', assetName: 'Boiler Utama', taskDescription: 'Pengecekan tekanan dan overhaul tahunan', frequency: 'Annual', startDate: '2026-01-15', nextDate: '2027-01-15', pic: 'Agus Setiawan', status: 'Active' },
+  { id: 'C-00003', taskType: 'Corrective', plantCode: 'AREA-01', areaId: 'AREA-01', areaName: 'Lantai Produksi', assetId: 'EQ-1010', assetName: 'Filter RO', taskDescription: 'Penggantian membran filter akibat penyumbatan', frequency: 'Weekly', startDate: '2026-08-04', nextDate: '2026-08-11', pic: 'Joko Widodo', status: 'Active' },
 ];
 
 function computeNextDate(startDate, frequency) {
@@ -34,16 +40,24 @@ function MaintenancePlanning() {
     const saved = localStorage.getItem('mx_maintenance_plans');
     return saved ? JSON.parse(saved) : INITIAL_PLANS;
   });
-  const [assets, setAssets] = useState([]);
+  const [assets, setAssets]   = useState([]);
+  const [plants, setPlants]   = useState([]);
+  const [zones, setZones]     = useState([]);
   const [workers, setWorkers] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [editId, setEditId] = useState(null);
-  const [assetSearch, setAssetSearch] = useState('');
+  const [editId, setEditId]       = useState(null);
+  const [assetSearch, setAssetSearch]           = useState('');
   const [showAssetDropdown, setShowAssetDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState(null); // row-click detail panel
+  const [detailForm, setDetailForm]     = useState(null); // editable copy
+
   const [form, setForm] = useState({
-    areaId: '', areaName: '', assetId: '', assetName: '',
-    taskDescription: '', frequency: 'Monthly', startDate: new Date().toISOString().split('T')[0], pic: ''
+    taskType: 'Preventive',
+    areaId: '', areaName: '', plantCode: '',
+    assetId: '', assetName: '',
+    taskDescription: '', frequency: 'Monthly',
+    startDate: new Date().toISOString().split('T')[0], pic: ''
   });
 
   useEffect(() => {
@@ -51,74 +65,94 @@ function MaintenancePlanning() {
   }, [plans]);
 
   useEffect(() => {
-    // Load assets from Asset Register
-    const savedAssets = localStorage.getItem('maintainx_assets');
-    if (savedAssets) {
-      setAssets(JSON.parse(savedAssets));
+    if (form.plantCode) {
+      const savedZones = localStorage.getItem('maintainx_zones_' + form.plantCode);
+      if (savedZones) setZones(JSON.parse(savedZones));
+      else setZones([]);
     } else {
-      // fallback demo assets
-      setAssets([
-        { id: 'EQ-1001', name: 'Pompa Distribusi', location: 'Lantai Produksi', locationId: 'AREA-01' },
-        { id: 'EQ-1005', name: 'Boiler Utama', location: 'Ruang Boiler', locationId: 'AREA-02' },
-        { id: 'EQ-1010', name: 'Filter RO', location: 'Lantai Produksi', locationId: 'AREA-01' },
-        { id: 'EQ-2001', name: 'Sensor Suhu', location: 'Panel Kontrol', locationId: 'AREA-03' },
-        { id: 'EQ-2005', name: 'Kompresor Udara', location: 'Ruang Utilitas', locationId: 'AREA-04' },
-      ]);
+      setZones([]);
     }
+  }, [form.plantCode]);
+
+  useEffect(() => {
+    const savedAssets = localStorage.getItem('maintainx_assets');
+    if (savedAssets) setAssets(JSON.parse(savedAssets));
+    else setAssets([
+      { id: 'EQ-1001', name: 'Pompa Distribusi', location: 'Lantai Produksi', locationId: 'AREA-01' },
+      { id: 'EQ-1005', name: 'Boiler Utama',     location: 'Ruang Boiler',    locationId: 'AREA-02' },
+      { id: 'EQ-1010', name: 'Filter RO',         location: 'Lantai Produksi', locationId: 'AREA-01' },
+      { id: 'EQ-2001', name: 'Sensor Suhu',        location: 'Panel Kontrol',  locationId: 'AREA-03' },
+      { id: 'EQ-2005', name: 'Kompresor Udara',    location: 'Ruang Utilitas', locationId: 'AREA-04' },
+    ]);
+
+    const savedPlants = localStorage.getItem('maintainx_plants');
+    if (savedPlants) setPlants(JSON.parse(savedPlants));
+
     const savedWorkers = localStorage.getItem('mx_workers');
-    if (savedWorkers) {
+    if (savedWorkers)
       setWorkers(JSON.parse(savedWorkers).filter(w => w.profilAkun === 'Teknisi' || w.profilAkun === 'Administrator'));
-    }
   }, []);
 
-  const filteredAssets = assetSearch
-    ? assets.filter(a => a.name.toLowerCase().includes(assetSearch.toLowerCase()) || a.id.toLowerCase().includes(assetSearch.toLowerCase()))
-    : assets;
+  const filteredAssets = assets.filter(a => {
+    if (form.plantCode && a.plantCode !== form.plantCode) return false;
+    if (form.areaId && a.zoneId !== form.areaId) return false;
+    if (assetSearch && !a.name.toLowerCase().includes(assetSearch.toLowerCase()) && !a.id.toLowerCase().includes(assetSearch.toLowerCase())) return false;
+    return true;
+  });
 
   const filteredPlans = plans.filter(p =>
-    p.assetName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.taskDescription.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.areaName.toLowerCase().includes(searchQuery.toLowerCase())
+    p.assetName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.taskDescription?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.areaName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.id?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleSelectAsset = (asset) => {
     setForm(prev => ({
       ...prev,
-      assetId: asset.id,
+      assetId:   asset.id,
       assetName: asset.name,
-      areaId: asset.locationId || '',
-      areaName: asset.location || ''
+      // We don't overwrite areaId/plantCode since they are already selected to filter this asset
     }));
     setAssetSearch(asset.name);
     setShowAssetDropdown(false);
   };
 
   const resetForm = () => {
-    setForm({ areaId: '', areaName: '', assetId: '', assetName: '', taskDescription: '', frequency: 'Monthly', startDate: new Date().toISOString().split('T')[0], pic: '' });
+    setForm({ taskType:'Preventive', areaId:'', areaName:'', plantCode:'', assetId:'', assetName:'', taskDescription:'', frequency:'Monthly', startDate: new Date().toISOString().split('T')[0], pic:'' });
     setAssetSearch('');
     setEditId(null);
   };
 
-  const handleOpenAdd = () => {
-    resetForm();
-    setShowModal(true);
+  const handleOpenAdd = () => { resetForm(); setShowModal(true); };
+
+  // Row click → open detail panel
+  const handleRowClick = (plan) => {
+    setSelectedPlan(plan);
+    setDetailForm({ ...plan });
   };
 
-  const handleEdit = (plan) => {
-    setForm({
-      areaId: plan.areaId, areaName: plan.areaName,
-      assetId: plan.assetId, assetName: plan.assetName,
-      taskDescription: plan.taskDescription, frequency: plan.frequency,
-      startDate: plan.startDate, pic: plan.pic || ''
-    });
-    setAssetSearch(plan.assetName);
-    setEditId(plan.id);
-    setShowModal(true);
+  // Update from detail panel
+  const handleDetailUpdate = () => {
+    if (!detailForm.taskDescription.trim()) return alert('Task Description tidak boleh kosong!');
+    const nextDate = computeNextDate(detailForm.startDate, detailForm.frequency);
+    setPlans(prev => prev.map(p => p.id === detailForm.id ? { ...detailForm, nextDate } : p));
+    setSelectedPlan({ ...detailForm, nextDate });
+    alert('Task berhasil diperbarui!');
+  };
+
+  // Delete from detail panel
+  const handleDetailDelete = () => {
+    if (!confirm(`Hapus task "${detailForm.taskDescription}" ?`)) return;
+    setPlans(prev => prev.filter(p => p.id !== detailForm.id));
+    setSelectedPlan(null);
+    setDetailForm(null);
   };
 
   const handleDelete = (id) => {
     if (confirm('Hapus rencana maintenance ini?')) {
       setPlans(prev => prev.filter(p => p.id !== id));
+      if (selectedPlan?.id === id) { setSelectedPlan(null); setDetailForm(null); }
     }
   };
 
@@ -133,7 +167,7 @@ function MaintenancePlanning() {
       setPlans(prev => prev.map(p => p.id === editId ? { ...p, ...form, nextDate } : p));
     } else {
       const newPlan = {
-        id: 'MP-' + Date.now().toString().slice(-5),
+        id: genTaskId(form.taskType),
         ...form,
         nextDate,
         status: 'Active'
@@ -158,6 +192,12 @@ function MaintenancePlanning() {
     return <span className={`px-2 py-0.5 rounded text-xs font-semibold ${colors[freq] || 'bg-gray-500/20 text-gray-400'}`}>{freq}</span>;
   };
 
+  const getTaskTypeBadge = (type) => {
+    if (type === 'Corrective')
+      return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-red-500/20 text-red-400">C</span>;
+    return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-blue-500/20 text-blue-400">P</span>;
+  };
+
   const isOverdue = (nextDate) => nextDate && new Date(nextDate) < new Date();
 
   return (
@@ -167,21 +207,18 @@ function MaintenancePlanning() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-bg-surface p-4 rounded-xl border border-border-color shadow gap-3">
         <div>
           <h2 className="text-xl font-bold">Perencanaan Maintenance</h2>
-          <p className="text-sm text-text-secondary mt-0.5">Kelola rencana pemeliharaan rutin untuk setiap Asset & Equipment</p>
+          <p className="text-sm text-text-secondary mt-0.5">Kelola rencana pemeliharaan rutin untuk setiap Asset &amp; Equipment</p>
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
-            <input
-              type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Cari aset atau task..."
+            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Cari aset, task, atau ID..."
               className="w-full bg-bg-dark border border-border-color rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-[#FF7043]"
             />
           </div>
-          <button
-            onClick={handleOpenAdd}
-            className="bg-gradient-to-r from-accent to-accent-secondary hover:from-[#FF8A65] hover:to-[#FF5722] text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg transition-all active:scale-95 whitespace-nowrap"
-          >
+          <button onClick={handleOpenAdd}
+            className="bg-gradient-to-r from-accent to-accent-secondary hover:from-[#FF8A65] hover:to-[#FF5722] text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg transition-all active:scale-95 whitespace-nowrap">
             <Plus size={18} /> Tambah Task Description
           </button>
         </div>
@@ -190,10 +227,10 @@ function MaintenancePlanning() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Rencana', value: plans.length, color: 'text-blue-400' },
-          { label: 'Aktif', value: plans.filter(p => p.status === 'Active').length, color: 'text-green-400' },
-          { label: 'Overdue', value: plans.filter(p => isOverdue(p.nextDate)).length, color: 'text-red-400' },
-          { label: 'Frekuensi Harian', value: plans.filter(p => p.frequency === 'Daily').length, color: 'text-orange-400' },
+          { label: 'Total Rencana',   value: plans.length,                                    color: 'text-blue-400' },
+          { label: 'Preventive (P)',  value: plans.filter(p => p.taskType !== 'Corrective').length, color: 'text-blue-400' },
+          { label: 'Corrective (C)',  value: plans.filter(p => p.taskType === 'Corrective').length, color: 'text-red-400' },
+          { label: 'Overdue',         value: plans.filter(p => isOverdue(p.nextDate)).length,  color: 'text-red-400' },
         ].map((card, i) => (
           <div key={i} className="bg-bg-surface border border-border-color rounded-xl p-4">
             <div className="text-text-secondary text-sm">{card.label}</div>
@@ -202,84 +239,274 @@ function MaintenancePlanning() {
         ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-bg-surface rounded-xl border border-border-color shadow overflow-hidden flex-1 flex flex-col">
-        <div className="flex items-center justify-between px-6 py-3 border-b border-border-color">
-          <span className="font-semibold flex items-center gap-2"><ClipboardList size={18} className="text-[#FF7043]" /> Daftar Task Description Maintenance</span>
-          <span className="text-sm text-text-secondary">{filteredPlans.length} rencana</span>
-        </div>
-        <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-bg-dark text-text-secondary border-b border-border-color">
-              <tr>
-                <th className="px-4 py-3 font-medium">ID</th>
-                <th className="px-4 py-3 font-medium">ID Lokasi</th>
-                <th className="px-4 py-3 font-medium">Lokasi / Area</th>
-                <th className="px-4 py-3 font-medium">ID Asset</th>
-                <th className="px-4 py-3 font-medium">Nama Asset</th>
-                <th className="px-4 py-3 font-medium">Task Description</th>
-                <th className="px-4 py-3 font-medium">Frequency</th>
-                <th className="px-4 py-3 font-medium">Start Date</th>
-                <th className="px-4 py-3 font-medium">PIC</th>
-                <th className="px-4 py-3 font-medium text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-color">
-              {filteredPlans.length === 0 ? (
-                <tr>
-                  <td colSpan="10" className="px-6 py-12 text-center text-text-secondary">
-                    Belum ada rencana maintenance. Klik "+ Tambah Task Description" untuk mulai.
-                  </td>
-                </tr>
-              ) : filteredPlans.map(plan => (
-                <tr key={plan.id} className="hover:bg-btn-secondary/50 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-blue-400">{plan.id}</td>
-                  <td className="px-4 py-3 text-text-secondary">{plan.areaId}</td>
-                  <td className="px-4 py-3 font-medium">{plan.areaName}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-text-secondary">{plan.assetId}</td>
-                  <td className="px-4 py-3 font-medium">{plan.assetName}</td>
-                  <td className="px-4 py-3 text-text-secondary max-w-[200px] truncate" title={plan.taskDescription}>{plan.taskDescription}</td>
-                  <td className="px-4 py-3">{getFrequencyBadge(plan.frequency)}</td>
-                  <td className="px-4 py-3 text-text-secondary">{plan.startDate}</td>
-                  <td className="px-4 py-3 text-text-secondary">{plan.pic || '-'}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2 justify-center">
-                      <button onClick={() => handleEdit(plan)} className="p-1.5 rounded hover:bg-blue-500/20 text-blue-400 transition-colors" title="Edit"><Edit2 size={15} /></button>
-                      <button onClick={() => handleDelete(plan.id)} className="p-1.5 rounded hover:bg-red-500/20 text-red-400 transition-colors" title="Hapus"><Trash2 size={15} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Legend */}
+      <div className="flex gap-4 text-xs text-text-secondary">
+        <span className="flex items-center gap-1.5">
+          <span className="px-1.5 py-0.5 rounded font-bold bg-blue-500/20 text-blue-400">P</span>
+          Preventive — ID dimulai dengan <strong className="text-blue-400">P-</strong>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="px-1.5 py-0.5 rounded font-bold bg-red-500/20 text-red-400">C</span>
+          Corrective — ID dimulai dengan <strong className="text-red-400">C-</strong>
+        </span>
       </div>
 
-      {/* Modal */}
+      {/* Table + Detail Panel side-by-side */}
+      <div className="flex gap-4 flex-1 overflow-hidden">
+
+        {/* Table */}
+        <div className="bg-bg-surface rounded-xl border border-border-color shadow overflow-hidden flex flex-col" style={{ flex: selectedPlan ? '1 1 60%' : '1 1 100%', transition:'flex 0.3s' }}>
+          <div className="flex items-center justify-between px-6 py-3 border-b border-border-color">
+            <span className="font-semibold flex items-center gap-2"><ClipboardList size={18} className="text-[#FF7043]" /> Daftar Task Description Maintenance</span>
+            <span className="text-sm text-text-secondary">{filteredPlans.length} rencana</span>
+          </div>
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-bg-dark text-text-secondary border-b border-border-color">
+                <tr>
+                  <th className="px-3 py-3 font-medium text-center">No</th>
+                  <th className="px-3 py-3 font-medium">ID Task</th>
+                  <th className="px-3 py-3 font-medium">ID Plant</th>
+                  <th className="px-3 py-3 font-medium">Lokasi/Area</th>
+                  <th className="px-3 py-3 font-medium">ID Asset</th>
+                  <th className="px-3 py-3 font-medium">Nama Asset</th>
+                  <th className="px-3 py-3 font-medium">Task Description</th>
+                  <th className="px-3 py-3 font-medium">Frequency</th>
+                  <th className="px-3 py-3 font-medium">Start Date</th>
+                  <th className="px-3 py-3 font-medium">PIC/Pekerja</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-color">
+                {filteredPlans.length === 0 ? (
+                  <tr><td colSpan="10" className="px-6 py-12 text-center text-text-secondary">Belum ada rencana maintenance. Klik "+ Tambah Task Description" untuk mulai.</td></tr>
+                ) : filteredPlans.map((plan, idx) => {
+                  const isSelected = selectedPlan?.id === plan.id;
+                  return (
+                    <tr key={plan.id}
+                      onClick={() => handleRowClick(plan)}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected
+                          ? 'bg-[#FF7043]/10 border-l-2 border-[#FF7043]'
+                          : 'hover:bg-btn-secondary/50'
+                      }`}>
+                      <td className="px-3 py-3 text-center text-text-secondary text-xs">{idx + 1}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-1.5">
+                          {getTaskTypeBadge(plan.taskType)}
+                          <span className="font-mono text-xs text-blue-400">{plan.id}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 font-mono text-xs text-text-secondary">{plan.plantCode || plan.areaId || '-'}</td>
+                      <td className="px-3 py-3 font-medium">{plan.areaName}</td>
+                      <td className="px-3 py-3 font-mono text-xs text-text-secondary">{plan.assetId}</td>
+                      <td className="px-3 py-3 font-medium">{plan.assetName}</td>
+                      <td className="px-3 py-3 text-text-secondary max-w-[180px] truncate" title={plan.taskDescription}>{plan.taskDescription}</td>
+                      <td className="px-3 py-3">{getFrequencyBadge(plan.frequency)}</td>
+                      <td className="px-3 py-3 text-text-secondary text-xs">{plan.startDate}</td>
+                      <td className="px-3 py-3 text-text-secondary">{plan.pic || '-'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Detail / Edit Panel */}
+        {selectedPlan && detailForm && (
+          <div className="bg-bg-surface border border-border-color rounded-xl shadow-2xl flex flex-col overflow-hidden" style={{ width: 340, flexShrink: 0 }}>
+            {/* Panel Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border-color bg-black/20">
+              <div>
+                <div className="flex items-center gap-2">
+                  {getTaskTypeBadge(detailForm.taskType)}
+                  <span className="font-mono text-sm text-blue-400 font-semibold">{detailForm.id}</span>
+                </div>
+                <p className="text-xs text-text-secondary mt-0.5">Klik field untuk mengedit</p>
+              </div>
+              <button onClick={() => { setSelectedPlan(null); setDetailForm(null); }} className="text-text-secondary hover:text-text-primary">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Editable Fields */}
+            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
+
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Tipe Task</label>
+                <select value={detailForm.taskType}
+                  onChange={e => setDetailForm(prev => ({ ...prev, taskType: e.target.value }))}
+                  className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043] appearance-none">
+                  <option value="Preventive">Preventive (P-)</option>
+                  <option value="Corrective">Corrective (C-)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">ID Plant</label>
+                <input type="text" value={detailForm.plantCode || detailForm.areaId || ''}
+                  onChange={e => setDetailForm(prev => ({ ...prev, plantCode: e.target.value }))}
+                  className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043] font-mono" />
+              </div>
+
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Lokasi / Area</label>
+                <input type="text" value={detailForm.areaName}
+                  onChange={e => setDetailForm(prev => ({ ...prev, areaName: e.target.value }))}
+                  className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043]" />
+              </div>
+
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">ID Asset</label>
+                <input type="text" value={detailForm.assetId}
+                  onChange={e => setDetailForm(prev => ({ ...prev, assetId: e.target.value }))}
+                  className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043] font-mono" />
+              </div>
+
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Nama Asset</label>
+                <input type="text" value={detailForm.assetName}
+                  onChange={e => setDetailForm(prev => ({ ...prev, assetName: e.target.value }))}
+                  className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043]" />
+              </div>
+
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Task Description <span className="text-red-500">*</span></label>
+                <textarea value={detailForm.taskDescription} rows={3}
+                  onChange={e => setDetailForm(prev => ({ ...prev, taskDescription: e.target.value }))}
+                  className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043] resize-none" />
+              </div>
+
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Frequency</label>
+                <select value={detailForm.frequency}
+                  onChange={e => setDetailForm(prev => ({ ...prev, frequency: e.target.value }))}
+                  className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043] appearance-none">
+                  {FREQUENCY_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Start Date</label>
+                <input type="date" value={detailForm.startDate}
+                  onChange={e => setDetailForm(prev => ({ ...prev, startDate: e.target.value }))}
+                  className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043]" />
+              </div>
+
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">PIC / Pekerja</label>
+                {workers.length > 0 ? (
+                  <select value={detailForm.pic || ''}
+                    onChange={e => setDetailForm(prev => ({ ...prev, pic: e.target.value }))}
+                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043] appearance-none">
+                    <option value="">— Pilih Teknisi —</option>
+                    {workers.map(w => <option key={w.id} value={w.nama}>{w.nama}</option>)}
+                  </select>
+                ) : (
+                  <input type="text" value={detailForm.pic || ''} placeholder="Nama PIC / Teknisi"
+                    onChange={e => setDetailForm(prev => ({ ...prev, pic: e.target.value }))}
+                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043]" />
+                )}
+              </div>
+
+              {/* Next date preview */}
+              {detailForm.startDate && detailForm.frequency && (
+                <div className="text-xs bg-blue-500/10 border border-blue-500/30 rounded-lg p-2.5 text-blue-300">
+                  📅 Next Date: <strong>{computeNextDate(detailForm.startDate, detailForm.frequency)}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* Panel Footer Actions */}
+            <div className="px-5 py-4 border-t border-border-color flex gap-2">
+              <button onClick={handleDetailUpdate}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gradient-to-r from-accent to-accent-secondary text-white font-semibold text-sm hover:from-[#FF8A65] hover:to-[#FF5722] shadow transition-all active:scale-95">
+                <Save size={15} /> Update
+              </button>
+              <button onClick={handleDetailDelete}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/35 font-semibold text-sm transition-colors">
+                <Trash2 size={15} /> Hapus
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-bg-surface border border-border-color rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b border-border-color bg-black/20">
-              <h2 className="text-xl font-bold">{editId ? 'Edit Task Description' : 'Tambah Task Description'}</h2>
-              <button onClick={() => { setShowModal(false); resetForm(); }} className="text-text-secondary hover:text-text-primary">
-                <X size={24} />
-              </button>
+              <h2 className="text-xl font-bold">Tambah Task Description</h2>
+              <button onClick={() => { setShowModal(false); resetForm(); }} className="text-text-secondary hover:text-text-primary"><X size={24} /></button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
+
+              {/* Task Type */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">Tipe Task <span className="text-red-500">*</span></label>
+                <div className="flex gap-3">
+                  {['Preventive', 'Corrective'].map(type => (
+                    <button key={type} type="button"
+                      onClick={() => setForm(prev => ({ ...prev, taskType: type }))}
+                      className={`flex-1 py-2.5 rounded-lg border font-semibold text-sm transition-colors ${
+                        form.taskType === type
+                          ? type === 'Corrective'
+                            ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                            : 'bg-blue-500/20 border-blue-500/50 text-blue-400'
+                          : 'bg-transparent border-border-color text-text-secondary hover:border-[#FF7043]'
+                      }`}>
+                      {type === 'Corrective' ? 'C — Corrective' : 'P — Preventive'}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-text-secondary mt-1">ID Task akan otomatis diberi prefix sesuai tipe: <strong className="text-blue-400">P-XXXXX</strong> atau <strong className="text-red-400">C-XXXXX</strong></p>
+              </div>
+
+              {/* Plant / Zone / Asset Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Kode Area/Lokasi (Plant) <span className="text-red-500">*</span></label>
+                  <select value={form.plantCode} required
+                    onChange={(e) => {
+                      const pc = e.target.value;
+                      setForm(prev => ({ ...prev, plantCode: pc, areaId: '', areaName: '', assetId: '', assetName: '' }));
+                      setAssetSearch('');
+                    }}
+                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] appearance-none">
+                    <option value="">— Pilih Plant —</option>
+                    {plants.map(p => <option key={p.code} value={p.code}>{p.code} — {p.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Area/Lokasi (Zone) <span className="text-red-500">*</span></label>
+                  <select value={form.areaId} required disabled={!form.plantCode}
+                    onChange={(e) => {
+                      const zone = zones.find(z => z.id === e.target.value);
+                      setForm(prev => ({ ...prev, areaId: e.target.value, areaName: zone ? zone.name : '', assetId: '', assetName: '' }));
+                      setAssetSearch('');
+                    }}
+                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] appearance-none disabled:opacity-50 disabled:cursor-not-allowed">
+                    <option value="">— Pilih Zone —</option>
+                    {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
               {/* Asset Search */}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">Pilih Asset / Equipment <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
-                  <input
-                    type="text" value={assetSearch}
+                  <input type="text" value={assetSearch}
+                    disabled={!form.areaId}
                     onChange={e => { setAssetSearch(e.target.value); setShowAssetDropdown(true); }}
                     onFocus={() => setShowAssetDropdown(true)}
-                    placeholder="Ketik nama atau ID asset..."
-                    className="w-full bg-bg-dark border border-border-color rounded-lg py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:border-[#FF7043]"
+                    placeholder={form.areaId ? "Ketik nama atau ID asset..." : "Pilih Plant & Zone terlebih dahulu"}
+                    className="w-full bg-bg-dark border border-border-color rounded-lg py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:border-[#FF7043] disabled:opacity-50 disabled:cursor-not-allowed"
                   />
-                  {showAssetDropdown && (
+                  {showAssetDropdown && form.areaId && (
                     <div className="absolute z-10 w-full mt-1 bg-bg-surface border border-border-color rounded-lg shadow-xl max-h-48 overflow-y-auto">
                       {filteredAssets.length > 0 ? filteredAssets.map(a => (
                         <div key={a.id} onClick={() => handleSelectAsset(a)}
@@ -291,14 +518,14 @@ function MaintenancePlanning() {
                           {form.assetId === a.id && <Check size={14} className="text-green-500" />}
                         </div>
                       )) : (
-                        <div className="px-4 py-3 text-sm text-text-secondary text-center">Asset tidak ditemukan</div>
+                        <div className="px-4 py-3 text-sm text-text-secondary text-center">Asset tidak ditemukan di area ini</div>
                       )}
                     </div>
                   )}
                 </div>
                 {form.assetId && (
                   <div className="mt-2 text-xs text-green-500 flex items-center gap-1">
-                    <Check size={12} /> Dipilih: {form.assetId} — {form.areaName}
+                    <Check size={12} /> Dipilih: {form.assetId} — {form.assetName}
                   </div>
                 )}
               </div>
@@ -306,8 +533,7 @@ function MaintenancePlanning() {
               {/* Task Description */}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">Task Description <span className="text-red-500">*</span></label>
-                <textarea
-                  value={form.taskDescription}
+                <textarea value={form.taskDescription}
                   onChange={e => setForm(prev => ({ ...prev, taskDescription: e.target.value }))}
                   rows={3} required
                   placeholder="Contoh: Pemeriksaan pelumasan, kebocoran, dan kondisi bearing..."
@@ -316,26 +542,18 @@ function MaintenancePlanning() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                {/* Frequency */}
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-1.5">Frequency / Interval <span className="text-red-500">*</span></label>
-                  <select
-                    value={form.frequency}
-                    onChange={e => setForm(prev => ({ ...prev, frequency: e.target.value }))}
-                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] appearance-none"
-                  >
+                  <select value={form.frequency} onChange={e => setForm(prev => ({ ...prev, frequency: e.target.value }))}
+                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] appearance-none">
                     {FREQUENCY_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
                 </div>
-
-                {/* Start Date */}
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-1.5">Start Date <span className="text-red-500">*</span></label>
-                  <input
-                    type="date" value={form.startDate} required
+                  <input type="date" value={form.startDate} required
                     onChange={e => setForm(prev => ({ ...prev, startDate: e.target.value }))}
-                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043]"
-                  />
+                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043]" />
                 </div>
               </div>
 
@@ -343,24 +561,18 @@ function MaintenancePlanning() {
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">PIC (Teknisi/Penanggung Jawab)</label>
                 {workers.length > 0 ? (
-                  <select
-                    value={form.pic}
-                    onChange={e => setForm(prev => ({ ...prev, pic: e.target.value }))}
-                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] appearance-none"
-                  >
+                  <select value={form.pic} onChange={e => setForm(prev => ({ ...prev, pic: e.target.value }))}
+                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] appearance-none">
                     <option value="">— Pilih Teknisi —</option>
                     {workers.map(w => <option key={w.id} value={w.nama}>{w.nama} ({w.posisi})</option>)}
                   </select>
                 ) : (
-                  <input
-                    type="text" value={form.pic} placeholder="Nama teknisi / PIC..."
+                  <input type="text" value={form.pic} placeholder="Nama teknisi / PIC..."
                     onChange={e => setForm(prev => ({ ...prev, pic: e.target.value }))}
-                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043]"
-                  />
+                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043]" />
                 )}
               </div>
 
-              {/* Next date preview */}
               {form.startDate && form.frequency && (
                 <div className="text-sm bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-blue-300">
                   📅 Next Maintenance Date: <strong>{computeNextDate(form.startDate, form.frequency)}</strong>
@@ -371,7 +583,7 @@ function MaintenancePlanning() {
               <div className="flex justify-end gap-3 pt-4 border-t border-border-color">
                 <button type="button" onClick={() => { setShowModal(false); resetForm(); }} className="px-5 py-2.5 text-text-secondary hover:text-text-primary font-medium">Batal</button>
                 <button type="submit" className="bg-gradient-to-r from-accent to-accent-secondary text-white px-6 py-2.5 rounded-lg font-medium shadow-lg hover:from-[#FF8A65] hover:to-[#FF5722]">
-                  {editId ? 'Simpan Perubahan' : 'Tambah Rencana'}
+                  Tambah Rencana
                 </button>
               </div>
             </form>

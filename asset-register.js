@@ -7,7 +7,8 @@ const defaultPlants = [
     company: 'PT. MaintainX Manufacturing',
     location: 'Kawasan Industri KIIC, Jawa Barat',
     owner: 'Budi Santoso',
-    bgImage: 'https://images.unsplash.com/photo-1565515261739-16628fb68770?q=80&w=600&auto=format&fit=crop'
+    bgImage: 'https://images.unsplash.com/photo-1565515261739-16628fb68770?q=80&w=600&auto=format&fit=crop',
+    status: 'Active'
   },
   {
     code: 'PLT-088',
@@ -15,7 +16,8 @@ const defaultPlants = [
     company: 'PT. MaintainX Logistics',
     location: 'Cikarang Dry Port, Bekasi',
     owner: 'Siti Rahma',
-    bgImage: null
+    bgImage: null,
+    status: 'Active'
   },
   {
     code: 'PLT-215',
@@ -23,7 +25,8 @@ const defaultPlants = [
     company: 'PT. MaintainX Heavy Ind.',
     location: 'Kawasan SIER, Jawa Timur',
     owner: 'Ahmad Fauzi',
-    bgImage: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=600&auto=format&fit=crop'
+    bgImage: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=600&auto=format&fit=crop',
+    status: 'Inactive'
   },
   {
     code: 'PLT-042',
@@ -31,7 +34,8 @@ const defaultPlants = [
     company: 'PT. MaintainX Electronics',
     location: 'Batamindo Industrial Park, Kepri',
     owner: 'Dewi Kusuma',
-    bgImage: null
+    bgImage: null,
+    status: 'Active'
   },
   {
     code: 'PLT-110',
@@ -39,7 +43,8 @@ const defaultPlants = [
     company: 'PT. MaintainX Packaging',
     location: 'Kawasan Industri Jatake, Banten',
     owner: 'Rudi Hermawan',
-    bgImage: null
+    bgImage: null,
+    status: 'Active'
   }
 ];
 
@@ -159,6 +164,18 @@ function renderPlantGrid() {
                  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.95)); z-index: 1;"></div>`;
     }
 
+    let statusBadge = '';
+    const status = plant.status || 'Active';
+    if (status === 'Active') {
+      statusBadge = `<span style="background-color: rgba(34, 197, 94, 0.2); color: #4ade80; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(34, 197, 94, 0.3);">
+        <span style="width: 6px; height: 6px; background-color: #4ade80; border-radius: 50%;"></span> Active
+      </span>`;
+    } else {
+      statusBadge = `<span style="background-color: rgba(239, 68, 68, 0.2); color: #f87171; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(239, 68, 68, 0.3);">
+        <span style="width: 6px; height: 6px; background-color: #f87171; border-radius: 50%;"></span> Inactive
+      </span>`;
+    }
+
     card.innerHTML = `
       ${imgHtml}
       <div class="card-kebab kebab-toggle" data-code="${plant.code}" style="z-index: 3;">
@@ -172,14 +189,31 @@ function renderPlantGrid() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
         </a>
       </div>
-      <p class="plant-code">${plant.code}</p>
-      <div class="plant-details">
-        <p class="plant-name">${plant.name}</p>
-        <p class="plant-company">${plant.company}</p>
-        <p class="plant-location">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:-2px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-          ${plant.location}
-        </p>
+      
+      <div style="display: flex; justify-content: space-between; z-index: 2; height: 100%; position: relative;">
+        <!-- Left Side: Details -->
+        <div style="display: flex; flex-direction: column; justify-content: space-between; flex: 1; padding-right: 16px;">
+          <div>
+            <div style="margin-bottom: 8px;">${statusBadge}</div>
+            <p class="plant-code" style="font-size: 1.5rem; margin-bottom: 8px;">${plant.code}</p>
+          </div>
+          <div class="plant-details" style="margin-top: auto;">
+            <p class="plant-name" style="font-size: 1.15rem;">${plant.name}</p>
+            <p class="plant-company" style="font-size: 0.85rem;">${plant.company}</p>
+            <p class="plant-location" style="font-size: 0.8rem; line-height: 1.4;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:-2px; flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              ${plant.location}
+            </p>
+          </div>
+        </div>
+
+        <!-- Right Side: QR Code -->
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 90px; flex-shrink: 0;">
+          <div style="background-color: white; padding: 6px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; width: 100%; aspect-ratio: 1/1;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${plant.code}" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply;" />
+          </div>
+          <span style="font-size: 0.65rem; color: #94a3b8; margin-top: 6px; font-weight: 500; text-align: center; text-transform: uppercase; letter-spacing: 0.5px;">Scan for Info</span>
+        </div>
       </div>
     `;
 
@@ -266,9 +300,9 @@ function handlePlantFormSubmit() {
   if (!address) { alert('Alamat wajib diisi!'); return; }
   if (!owner) { alert('Pemilik Area wajib diisi!'); return; }
 
-  // Validate file size (5 MB max)
-  if (layoutFile && layoutFile.size > 5 * 1024 * 1024) {
-    alert('Ukuran gambar melebihi batas 5 MB. Harap pilih gambar yang lebih kecil.');
+  // Validate file size (30 MB max)
+  if (layoutFile && layoutFile.size > 30 * 1024 * 1024) {
+    alert('Ukuran gambar terlalu besar. Harap pilih gambar di bawah 30 MB.');
     return;
   }
 
@@ -306,7 +340,25 @@ function handlePlantFormSubmit() {
 
   if (layoutFile) {
     const reader = new FileReader();
-    reader.onload = (ev) => saveData(ev.target.result);
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1280;
+        let w = img.width, h = img.height;
+        if (w > MAX_DIM || h > MAX_DIM) {
+          if (w > h) { h = Math.round((h * MAX_DIM) / w); w = MAX_DIM; }
+          else { w = Math.round((w * MAX_DIM) / h); h = MAX_DIM; }
+        }
+        const cvs = document.createElement('canvas');
+        cvs.width = w; cvs.height = h;
+        const ctx = cvs.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressed = cvs.toDataURL('image/jpeg', 0.6);
+        saveData(compressed);
+      };
+      img.onerror = () => saveData(ev.target.result);
+      img.src = ev.target.result;
+    };
     reader.onerror = () => alert('Gagal membaca file gambar! Coba gunakan file lain.');
     reader.readAsDataURL(layoutFile);
   } else {

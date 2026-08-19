@@ -33,14 +33,49 @@ function DataBarang() {
     return INITIAL_INVENTORY;
   });
 
+  const [warehouses, setWarehouses] = useState([]);
+
   useEffect(() => {
     try {
       localStorage.setItem('maintainx_inventory', JSON.stringify(inventory));
     } catch (error) {
       console.error("Failed to save inventory to localStorage:", error);
-      alert("Gagal menyimpan data: Penyimpanan lokal penuh (gambar terlalu besar).");
+      
+      // If quota exceeded, clean up old oversized images (>100KB roughly)
+      let cleaned = false;
+      const cleanedInventory = inventory.map(item => {
+        if (item.image && item.image.length > 100000) {
+          cleaned = true;
+          return { ...item, image: null };
+        }
+        return item;
+      });
+
+      if (cleaned) {
+        try {
+          localStorage.setItem('maintainx_inventory', JSON.stringify(cleanedInventory));
+          setInventory(cleanedInventory);
+        } catch (e2) {
+          console.error("Gagal menyimpan data secara permanen. Penyimpanan lokal penuh.");
+        }
+      } else {
+        console.error("Gagal menyimpan data: Penyimpanan lokal penuh.");
+      }
     }
   }, [inventory]);
+
+  useEffect(() => {
+    const savedWh = localStorage.getItem('maintainx_warehouses');
+    if (savedWh) setWarehouses(JSON.parse(savedWh));
+    else setWarehouses([{ name: 'Gudang Utama' }, { name: 'Gudang Sparepart' }, { name: 'Gudang Chemical' }, { name: 'Gudang APD' }, { name: 'Gudang Limbah B3' }]);
+
+    const handleStorage = () => {
+      const savedInv = localStorage.getItem('maintainx_inventory');
+      if (savedInv) setInventory(JSON.parse(savedInv));
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCriteria, setSearchCriteria] = useState('Semua'); 
   const [filterGudang, setFilterGudang] = useState('');
@@ -145,7 +180,10 @@ function DataBarang() {
     const itemToEdit = inventory.find(i => i.id === id);
     if (itemToEdit) {
       setModalMode('edit');
-      setFormData({ ...itemToEdit });
+      setFormData({ 
+        gudang: warehouses[0]?.name || 'Gudang Utama', 
+        ...itemToEdit 
+      });
       
       // Extract number from prefix
       const prefix = PREFIX_MAP[itemToEdit.type] || '';
@@ -174,7 +212,8 @@ function DataBarang() {
           let width = img.width;
           let height = img.height;
           
-          const MAX_DIMENSION = 800;
+          // Reduce max dimension drastically to prevent localStorage overflow
+          const MAX_DIMENSION = 250;
           if (width > height && width > MAX_DIMENSION) {
             height *= MAX_DIMENSION / width;
             width = MAX_DIMENSION;
@@ -186,10 +225,14 @@ function DataBarang() {
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
+          
+          // Fill background white in case of transparent PNGs before converting to JPEG
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
           
-          // Compress image to base64 JPEG
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          // Compress image to base64 JPEG with more aggressive compression
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
           setFormData(prev => ({ ...prev, image: compressedBase64 }));
         };
         img.src = reader.result;
@@ -315,6 +358,7 @@ function DataBarang() {
                   <th className="px-4 py-3 font-medium">Kegunaan</th>
                   <th className="px-4 py-3 font-medium">Spesifikasi</th>
                   <th className="px-4 py-3 font-medium">Satuan</th>
+                  <th className="px-4 py-3 font-medium">Gudang</th>
                   <th className="px-4 py-3 font-medium text-center">Stok Min</th>
                   <th className="px-4 py-3 font-medium text-center">Jumlah</th>
                 </tr>
@@ -371,6 +415,7 @@ function DataBarang() {
                         {item.spec || '-'}
                       </td>
                       <td className="px-4 py-3 text-text-secondary print:text-black">{item.unit}</td>
+                      <td className="px-4 py-3 text-text-secondary print:text-black font-medium">{item.gudang}</td>
                       <td className="px-4 py-3 text-center text-text-secondary print:text-black">{item.min}</td>
                       <td className="px-4 py-3 text-center font-bold text-text-primary print:text-black">
                         {item.qty}
@@ -512,7 +557,7 @@ function DataBarang() {
                   </div>
 
 
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-text-secondary">Klasifikasi Kegunaan</label>
                       <select 
@@ -522,6 +567,17 @@ function DataBarang() {
                         className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] appearance-none text-text-primary"
                       >
                         {KEGUNAAN_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-text-secondary">Lokasi Gudang</label>
+                      <select 
+                        required
+                        value={formData.gudang} 
+                        onChange={e => setFormData({...formData, gudang: e.target.value})}
+                        className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] appearance-none text-text-primary"
+                      >
+                        {warehouses.map(w => <option key={w.name} value={w.name}>{w.name}</option>)}
                       </select>
                     </div>
                   </div>
@@ -555,21 +611,21 @@ function DataBarang() {
                     <label className="text-xs font-medium text-text-secondary">Upload Gambar Barang</label>
                     
                     <div 
-                      className="border-2 border-dashed border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7043] transition-colors bg-bg-dark"
+                      className="border-2 border-dashed border-gray-600 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7043] transition-colors bg-bg-dark h-48"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       {formData.image ? (
-                        <div className="relative w-full h-24 overflow-hidden rounded">
-                          <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
-                            <span className="text-text-primary text-xs font-medium">Ganti Gambar</span>
+                        <div className="relative w-full h-full overflow-hidden rounded bg-black/40 flex items-center justify-center">
+                          <img src={formData.image} alt="Preview" className="max-w-full max-h-full object-contain" />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <span className="text-text-primary text-sm font-medium">Ganti Gambar</span>
                           </div>
                         </div>
                       ) : (
-                        <>
-                          <Upload size={24} className="text-text-secondary mb-2" />
-                          <span className="text-xs text-text-secondary text-center">Klik untuk memilih gambar<br/>(Max 10MB)</span>
-                        </>
+                        <div className="flex flex-col items-center">
+                          <Upload size={32} className="text-text-secondary mb-3" />
+                          <span className="text-sm text-text-secondary text-center">Klik untuk memilih gambar<br/><span className="text-xs opacity-75">(Akan otomatis di-compress)</span></span>
+                        </div>
                       )}
                       <input 
                         type="file" 

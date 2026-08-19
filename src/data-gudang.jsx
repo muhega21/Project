@@ -49,7 +49,51 @@ const INITIAL_WAREHOUSES = [
 ];
 
 function DataGudang() {
-  const [warehouses, setWarehouses] = useState(INITIAL_WAREHOUSES);
+  const [warehouses, setWarehouses] = useState(() => {
+    const saved = localStorage.getItem('maintainx_warehouses');
+    return saved ? JSON.parse(saved) : INITIAL_WAREHOUSES;
+  });
+  
+  const [inventory, setInventory] = useState(() => {
+    const saved = localStorage.getItem('maintainx_inventory');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return; // Skip saving on initial mount
+    }
+
+    try {
+      localStorage.setItem('maintainx_warehouses', JSON.stringify(warehouses));
+    } catch (error) {
+      console.error("Failed to save warehouses:", error);
+      let cleaned = false;
+      const cleanedWarehouses = warehouses.map(item => {
+        if (item.image && item.image.length > 100000) {
+          cleaned = true;
+          return { ...item, image: null };
+        }
+        return item;
+      });
+      if (cleaned) {
+        try {
+          localStorage.setItem('maintainx_warehouses', JSON.stringify(cleanedWarehouses));
+          setWarehouses(cleanedWarehouses);
+          alert("Beberapa gambar lama dihapus karena penyimpanan lokal penuh, namun perubahan baru berhasil disimpan.");
+        } catch(e) {
+          console.error("Local storage is completely full.");
+          alert("Gagal menyimpan: Penyimpanan lokal perangkat Anda benar-benar penuh.");
+        }
+      } else {
+        console.error("Local storage is full.");
+        alert("Gagal menyimpan gambar: Penyimpanan lokal penuh. Harap hapus beberapa gambar lama.");
+      }
+    }
+  }, [warehouses]);
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modal State
@@ -120,7 +164,33 @@ function DataGudang() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, image: reader.result }));
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          const MAX_DIMENSION = 200;
+          if (width > height && width > MAX_DIMENSION) {
+            height *= MAX_DIMENSION / width;
+            width = MAX_DIMENSION;
+          } else if (height > MAX_DIMENSION) {
+            width *= MAX_DIMENSION / height;
+            height = MAX_DIMENSION;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
+          setFormData(prev => ({ ...prev, image: compressedBase64 }));
+        };
+        img.src = reader.result;
       };
       reader.readAsDataURL(file);
     }
@@ -258,7 +328,9 @@ function DataGudang() {
                       <div className="flex items-center gap-2 text-text-secondary text-xs font-medium">
                         <Layers size={15} className="text-blue-400"/> Total Barang
                       </div>
-                      <div className="text-text-primary text-xs font-medium">{item.totalBarang ? `${item.totalBarang} Item` : '0 Item'}</div>
+                      <div className="text-text-primary text-xs font-medium">
+                        {inventory.filter(i => i.gudang === item.name).length} Item
+                      </div>
                     </div>
                     <div className="flex justify-between items-center bg-bg-dark/60 p-3 rounded-lg border border-border-color/60">
                       <div className="flex items-center gap-2 text-text-secondary text-xs font-medium">
@@ -289,9 +361,12 @@ function DataGudang() {
             
             <form onSubmit={handleSave} className="flex-1 overflow-y-auto custom-scrollbar p-5 flex flex-col gap-5">
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-text-secondary flex justify-between">Kode Gudang (ID) <span className="text-text-secondary italic">(Otomatis)</span></label>
+                  <label className="text-xs font-medium text-text-secondary flex justify-between">
+                    Kode Gudang (ID)
+                    <span className="text-text-secondary italic font-normal">(Otomatis)</span>
+                  </label>
                   <input 
                     type="text" required
                     disabled

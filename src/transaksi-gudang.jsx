@@ -2,41 +2,47 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
   ArrowDownToLine, ArrowUpFromLine, Search, Filter, 
-  X, Check, AlertCircle, Package, ArrowLeftRight, Image as ImageIcon, Calendar, RotateCw, Download, Plus, Trash2
+  X, Check, AlertCircle, Package, ArrowLeftRight, Image as ImageIcon, Calendar, RotateCw, Download, Plus, Trash2, Database
 } from 'lucide-react';
 
-// Mock inventory data for dropdowns
-const INITIAL_INVENTORY = [
-  { id: 'RAW-001', name: 'Plat Besi 5mm', unit: 'Sheet', qty: 50, image: 'https://images.unsplash.com/photo-1635339243765-b1a065bba438?auto=format&fit=crop&w=300&q=80', gudang: 'Gudang Utama' },
-  { id: 'CSM-002', name: 'Pelumas Hidrolik 50L', unit: 'Bottle', qty: 25, image: 'https://images.unsplash.com/photo-1598207951491-255eaf139751?auto=format&fit=crop&w=300&q=80', gudang: 'Gudang B3' },
-  { id: 'PRT-003', name: 'Bantalan Rol (Bearing) 20mm', unit: 'Pcs', qty: 100, image: 'https://images.unsplash.com/photo-1590217983057-0a3eb2d8ce2f?auto=format&fit=crop&w=300&q=80', gudang: 'Gudang Utama' },
-  { id: 'RAW-004', name: 'Kabel Tembaga 2.5mm', unit: 'Roll', qty: 10, image: 'https://images.unsplash.com/photo-1558231908-04fc5ebccffc?auto=format&fit=crop&w=300&q=80', gudang: 'Gudang Transit' },
-  { id: 'SKU-005', name: 'Sensor Suhu PT100', unit: 'Pcs', qty: 5, image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=300&q=80', gudang: 'Gudang Utama' }
+// Ensure dynamic loading instead of hardcoded lists
+const FALLBACK_INVENTORY = [
+  { id: 'RAW-001', name: 'Plat Besi 5mm', unit: 'Sheet', qty: 50, image: '', gudang: 'Gudang Utama' }
 ];
 
-const GUDANG_LIST = ['Gudang Utama', 'Gudang B3', 'Gudang Transit'];
+const FALLBACK_WAREHOUSES = ['Gudang Utama', 'Gudang B3', 'Gudang Transit'];
 
-// Mock transactions data
-const MOCK_TRANSACTIONS = [
-  { id: 'BM-1001', date: '2023-11-20 09:30', type: 'in', itemId: 'RAW-001', itemName: 'Plat Besi 5mm', qty: 50, worker: 'Budi Santoso', notes: 'Penerimaan PO-202311' },
-  { id: 'BK-1002', date: '2023-11-21 14:15', type: 'out', itemId: 'CSM-002', itemName: 'Pelumas Hidrolik 50L', qty: 2, worker: 'Andi M', notes: 'Maintenance Pompa Hidrolik' },
-  { id: 'BM-1003', date: '2023-11-22 10:00', type: 'in', itemId: 'PRT-003', itemName: 'Bantalan Rol (Bearing) 20mm', qty: 20, worker: 'Budi Santoso', notes: 'Restock' },
-  { id: 'BK-1004', date: '2023-11-23 08:45', type: 'out', itemId: 'RAW-001', itemName: 'Plat Besi 5mm', qty: 5, worker: 'Joko', notes: 'Fabrikasi Struktur A' },
-];
+// Mock transactions data (Empty to start fresh)
+const MOCK_TRANSACTIONS = [];
 
 function TransaksiGudang() {
-  const [transactions, setTransactions] = useState(MOCK_TRANSACTIONS);
+  const [transactions, setTransactions] = useState(() => {
+    // Force clear transactions for a fresh start
+    const isCleared = localStorage.getItem('maintainx_trx_cleared_v2');
+    if (!isCleared) {
+      localStorage.removeItem('maintainx_transactions');
+      localStorage.setItem('maintainx_trx_cleared_v2', 'true');
+      return MOCK_TRANSACTIONS;
+    }
+    const saved = localStorage.getItem('maintainx_transactions');
+    return saved ? JSON.parse(saved) : MOCK_TRANSACTIONS;
+  });
+  const [inventory, setInventory] = useState(() => {
+    const saved = localStorage.getItem('maintainx_inventory');
+    return saved ? JSON.parse(saved) : FALLBACK_INVENTORY;
+  });
+  const [warehouses, setWarehouses] = useState(() => {
+    const savedWh = localStorage.getItem('maintainx_warehouses');
+    return savedWh ? JSON.parse(savedWh).map(w => w.name) : FALLBACK_WAREHOUSES;
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   
-  // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalSearchTerm, setModalSearchTerm] = useState('');
-  
-  const [inventory, setInventory] = useState(INITIAL_INVENTORY);
   
   const [formData, setFormData] = useState({
     id: '',
@@ -48,21 +54,25 @@ function TransaksiGudang() {
 
   const [cart, setCart] = useState([]);
   const [tempQty, setTempQty] = useState('');
-  const [tempGudang, setTempGudang] = useState(GUDANG_LIST[0]);
+  const [tempGudang, setTempGudang] = useState(warehouses[0] || 'Gudang Utama');
 
   // Handle automatic gudang filling for out
   useEffect(() => {
     if (selectedItem && formData.type === 'out') {
-      setTempGudang(selectedItem.gudang || GUDANG_LIST[0]);
+      setTempGudang(selectedItem.gudang || warehouses[0] || 'Gudang Utama');
     }
-  }, [selectedItem, formData.type]);
+  }, [selectedItem, formData.type, warehouses]);
 
   // Handle URL parameters to open modal automatically or filter list
   useEffect(() => {
-    const saved = localStorage.getItem('mx_warehouse_items');
-    if (saved) {
-      setInventory(JSON.parse(saved));
-    }
+    // Keep inventory updated if another tab changes it
+    const handleStorage = () => {
+      const savedInv = localStorage.getItem('maintainx_inventory');
+      if (savedInv) setInventory(JSON.parse(savedInv));
+      const savedWh = localStorage.getItem('maintainx_warehouses');
+      if (savedWh) setWarehouses(JSON.parse(savedWh).map(w => w.name));
+    };
+    window.addEventListener('storage', handleStorage);
 
     const params = new URLSearchParams(window.location.search);
     let shouldCleanUrl = false;
@@ -83,7 +93,7 @@ function TransaksiGudang() {
           const reqs = JSON.parse(savedReqs);
           const targetReq = reqs.find(r => r.id === reqId);
           if (targetReq) {
-            const matchedItem = INITIAL_INVENTORY.find(item => item.name.toLowerCase() === targetReq.item.toLowerCase()) || {
+            const matchedItem = inventory.find(item => item.name.toLowerCase() === targetReq.item.toLowerCase()) || {
               id: 'REQ-ITEM',
               name: targetReq.item,
               unit: 'Pcs',
@@ -140,10 +150,40 @@ function TransaksiGudang() {
       itemName: cartItem.item.name,
       qty: cartItem.qty,
       worker: formData.worker,
-      notes: formData.notes || '-'
+      notes: formData.notes || '-',
+      gudang: cartItem.gudang || tempGudang
     }));
 
-    setTransactions([...newTrxArray, ...transactions]);
+    const finalTransactions = [...newTrxArray, ...transactions];
+    setTransactions(finalTransactions);
+    localStorage.setItem('maintainx_transactions', JSON.stringify(finalTransactions));
+
+    // Auto-update inventory stock
+    const updatedInventory = [...inventory];
+    cart.forEach(cartItem => {
+      const idx = updatedInventory.findIndex(inv => inv.id === cartItem.item.id);
+      if (idx !== -1) {
+        let currentQty = updatedInventory[idx].qty || 0;
+        if (formData.type === 'in') {
+          currentQty += cartItem.qty;
+          // Optionally update the warehouse if they chose a different one
+          updatedInventory[idx].gudang = cartItem.gudang;
+        } else if (formData.type === 'out') {
+          currentQty -= cartItem.qty;
+          if (currentQty < 0) currentQty = 0; // Prevent negative stock
+        }
+        updatedInventory[idx].qty = currentQty;
+      }
+    });
+    
+    setInventory(updatedInventory);
+    try {
+      localStorage.setItem('maintainx_inventory', JSON.stringify(updatedInventory));
+      window.dispatchEvent(new Event('storage'));
+    } catch(e) {
+      console.error("Failed to save updated inventory:", e);
+    }
+
     setIsModalOpen(false);
     resetForm();
   };
@@ -152,7 +192,7 @@ function TransaksiGudang() {
     setFormData({ id: '', date: new Date().toISOString().slice(0, 16), type: 'in', worker: 'Admin User', notes: '' });
     setSelectedItem(null);
     setTempQty('');
-    setTempGudang(GUDANG_LIST[0]);
+    setTempGudang(warehouses[0] || 'Gudang Utama');
     setCart([]);
     setModalSearchTerm('');
   };
@@ -171,6 +211,16 @@ function TransaksiGudang() {
     const newCart = [...cart];
     newCart.splice(index, 1);
     setCart(newCart);
+  };
+
+  const handleTypeChange = (newType) => {
+    if (formData.type !== newType) {
+      setFormData({...formData, type: newType, id: '', notes: ''});
+      setSelectedItem(null);
+      setTempQty('');
+      setCart([]);
+      setModalSearchTerm('');
+    }
   };
 
   const filteredData = transactions.filter(trx => {
@@ -195,7 +245,7 @@ function TransaksiGudang() {
   });
 
   const handleDownload = () => {
-    const headers = ['Tanggal', 'ID Transaksi', 'Tipe', 'Kode Barang', 'Nama Barang', 'Jumlah', 'Pekerja/PIC', 'Keterangan'];
+    const headers = ['Tanggal', 'ID Transaksi', 'Tipe', 'Kode Barang', 'Nama Barang', 'Jumlah', 'Lokasi Gudang', 'Pekerja/PIC', 'Keterangan'];
     const csvRows = [];
     csvRows.push(headers.join(','));
 
@@ -208,6 +258,7 @@ function TransaksiGudang() {
         trx.itemId,
         `"${trx.itemName}"`,
         trx.qty,
+        `"${trx.gudang || '-'}"`,
         `"${trx.worker}"`,
         `"${trx.notes.replace(/"/g, '""')}"`
       ];
@@ -355,6 +406,7 @@ function TransaksiGudang() {
                 <th className="px-4 py-3 font-medium">Kode Barang</th>
                 <th className="px-4 py-3 font-medium">Nama Barang</th>
                 <th className="px-4 py-3 font-medium text-center">Jumlah</th>
+                <th className="px-4 py-3 font-medium">Lokasi Gudang</th>
                 <th className="px-4 py-3 font-medium">Pekerja / PIC</th>
                 <th className="px-4 py-3 font-medium">Keterangan</th>
               </tr>
@@ -380,6 +432,11 @@ function TransaksiGudang() {
                   <td className="px-4 py-3 text-center">
                     <span className={`font-bold ${trx.type === 'in' ? 'text-green-500' : 'text-orange-500'}`}>
                       {trx.type === 'in' ? '+' : '-'}{trx.qty}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-text-secondary text-xs">
+                    <span className="flex items-center gap-1 border border-border-color bg-bg-dark px-2 py-1 rounded w-max">
+                      <Database size={12} className="text-blue-400" /> {trx.gudang || '-'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-text-secondary">{trx.worker}</td>
@@ -415,7 +472,7 @@ function TransaksiGudang() {
             </div>
             
             <form onSubmit={handleTransaction} className="flex-1 overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-5 w-full">
                 
                 {/* SISI KIRI: Input Form */}
                 <div className="space-y-4">
@@ -424,11 +481,11 @@ function TransaksiGudang() {
                     <label className="text-xs font-medium text-text-secondary">Tipe Transaksi</label>
                     <div className="flex gap-2">
                       <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${formData.type === 'in' ? 'bg-green-600/20 border-green-500 text-green-400' : 'bg-bg-dark border-border-color text-text-secondary hover:border-gray-500'}`}>
-                        <input type="radio" name="type" value="in" className="hidden" checked={formData.type === 'in'} onChange={() => { setFormData({...formData, type: 'in', id: ''}); }} />
+                        <input type="radio" name="type" value="in" className="hidden" checked={formData.type === 'in'} onChange={() => handleTypeChange('in')} />
                         <ArrowDownToLine size={16} /> Barang Masuk
                       </label>
                       <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${formData.type === 'out' ? 'bg-orange-600/20 border-orange-500 text-orange-400' : 'bg-bg-dark border-border-color text-text-secondary hover:border-gray-500'}`}>
-                        <input type="radio" name="type" value="out" className="hidden" checked={formData.type === 'out'} onChange={() => { setFormData({...formData, type: 'out', id: ''}); }} />
+                        <input type="radio" name="type" value="out" className="hidden" checked={formData.type === 'out'} onChange={() => handleTypeChange('out')} />
                         <ArrowUpFromLine size={16} /> Barang Keluar
                       </label>
                     </div>
@@ -497,10 +554,20 @@ function TransaksiGudang() {
                       <label className="text-xs font-medium text-text-secondary">Jumlah</label>
                       <input 
                         type="number" min="1"
+                        max={formData.type === 'out' && selectedItem ? selectedItem.qty : undefined}
+                        disabled={formData.type === 'out' && selectedItem && selectedItem.qty === 0}
                         value={tempQty} 
-                        onChange={e => setTempQty(e.target.value)}
-                        className="w-full bg-bg-dark border border-gray-600 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] text-text-primary" 
-                        placeholder="0"
+                        onChange={e => {
+                          let val = e.target.value;
+                          if (formData.type === 'out' && selectedItem) {
+                            if (parseInt(val) > selectedItem.qty) {
+                              val = selectedItem.qty.toString();
+                            }
+                          }
+                          setTempQty(val);
+                        }}
+                        className="w-full bg-bg-dark border border-gray-600 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
+                        placeholder={formData.type === 'out' && selectedItem && selectedItem.qty === 0 ? 'Stok Habis' : '0'}
                       />
                     </div>
                   </div>
@@ -508,20 +575,30 @@ function TransaksiGudang() {
                   <div className="grid grid-cols-2 gap-4">
                     {/* Stok */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-text-secondary">Stok</label>
+                      <label className="text-xs font-medium text-text-secondary flex justify-between items-center h-4">
+                        <span>Sisa Stok Akhir</span>
+                      </label>
                       <input 
                         type="text" readOnly disabled
-                        value={selectedItem ? selectedItem.qty : ''} 
-                        className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none text-text-secondary cursor-not-allowed" 
+                        value={selectedItem ? calculateTotal() : ''} 
+                        className={`w-full bg-bg-dark border rounded-lg p-2.5 text-sm focus:outline-none cursor-not-allowed ${
+                          selectedItem 
+                            ? (calculateTotal() < (selectedItem.min !== undefined ? selectedItem.min : 10) 
+                                ? 'border-red-500/50 text-red-400 font-bold' 
+                                : 'border-border-color text-text-primary font-bold') 
+                            : 'border-border-color text-text-secondary'
+                        }`} 
                         placeholder="-"
                       />
                     </div>
                     {/* Stok Min */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-text-secondary">Stok Min</label>
+                      <label className="text-xs font-medium text-text-secondary flex justify-between items-center h-4">
+                        <span>Batas Stok Min</span>
+                      </label>
                       <input 
                         type="text" readOnly disabled
-                        value={selectedItem ? (selectedItem.minQty || 10) : ''} 
+                        value={selectedItem ? (selectedItem.min !== undefined ? selectedItem.min : 10) : ''} 
                         className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none text-text-secondary cursor-not-allowed" 
                         placeholder="-"
                       />
@@ -538,7 +615,7 @@ function TransaksiGudang() {
                         onChange={e => setTempGudang(e.target.value)}
                         className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] appearance-none text-text-primary"
                       >
-                        {GUDANG_LIST.map(g => <option key={g} value={g}>{g}</option>)}
+                        {warehouses.map(g => <option key={g} value={g}>{g}</option>)}
                       </select>
                     ) : (
                       <input 

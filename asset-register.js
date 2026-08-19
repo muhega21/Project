@@ -151,6 +151,13 @@ function renderPlantGrid() {
 
   container.innerHTML = '';
 
+  // Load all assets to match with zones
+  let allAssets = [];
+  try {
+    const rawAssets = localStorage.getItem('maintainx_assets');
+    if (rawAssets) allAssets = JSON.parse(rawAssets);
+  } catch(e) {}
+
   mockPlants.forEach(plant => {
     const card = document.createElement('div');
     card.className = 'plant-card relative';
@@ -175,6 +182,38 @@ function renderPlantGrid() {
         <span style="width: 6px; height: 6px; background-color: #f87171; border-radius: 50%;"></span> Inactive
       </span>`;
     }
+
+    // Build QR Code Data
+    let qrText = `Nama: ${plant.name}\nLokasi: ${plant.location}`;
+    try {
+      const savedZones = localStorage.getItem('maintainx_zones_' + plant.code);
+      if (savedZones) {
+        const zones = JSON.parse(savedZones);
+        if (zones && zones.length > 0) {
+          qrText += `\n\nDaftar Section:`;
+          zones.forEach(z => {
+            const zName = z.name || z.id;
+            const zAssets = allAssets.filter(a => a.plantCode === plant.code && a.zoneId === z.id);
+            if (zAssets.length > 0) {
+              const eqNames = zAssets.map(a => a.name).join(', ');
+              qrText += `\n- ${zName} (Isi: ${eqNames})`;
+            } else {
+              qrText += `\n- ${zName} (Kosong)`;
+            }
+          });
+        } else {
+          qrText += `\n\nBelum ada section.`;
+        }
+      } else {
+        qrText += `\n\nBelum ada section.`;
+      }
+    } catch(e) {}
+
+    // Limit length to ensure QR code is scannable
+    if (qrText.length > 350) {
+      qrText = qrText.substring(0, 345) + '...';
+    }
+    const qrData = encodeURIComponent(qrText);
 
     card.innerHTML = `
       ${imgHtml}
@@ -208,9 +247,12 @@ function renderPlantGrid() {
         </div>
 
         <!-- Right Side: QR Code -->
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 90px; flex-shrink: 0;">
-          <div style="background-color: white; padding: 6px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; width: 100%; aspect-ratio: 1/1;">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${plant.code}" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply;" />
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 90px; flex-shrink: 0;" title="Scan QR untuk melihat daftar Section">
+          <div style="background-color: white; padding: 6px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; width: 100%; aspect-ratio: 1/1; position: relative;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply;" />
+            <a href="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrData}" download="QR-${plant.code}.png" target="_blank" title="Download QR Code" style="position: absolute; bottom: -6px; right: -6px; background: #3b82f6; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s; z-index: 10;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" onclick="event.stopPropagation()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </a>
           </div>
           <span style="font-size: 0.65rem; color: #94a3b8; margin-top: 6px; font-weight: 500; text-align: center; text-transform: uppercase; letter-spacing: 0.5px;">Scan for Info</span>
         </div>

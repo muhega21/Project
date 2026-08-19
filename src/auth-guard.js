@@ -1,25 +1,22 @@
 // src/auth-guard.js
 
 // Definisi Hak Akses Menu (Sama seperti di Pengaturan)
-// [Dashboard, Task List, Asset Reg, Warehouse, Gudang Perkakas, Permintaan Logistik, Schedule, Report, Pekerja, Pengaturan]
+// [Dashboard, Asset Reg, Warehouse, Maintenance Planning, Report, Pekerja, Pengaturan]
 const ROLE_ACCESS = {
-  'Administrator': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  'Supervisor':    [1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-  'Admin':         [1, 1, 1, 1, 1, 1, 1, 0, 1, 0],
-  'Visitor':       [1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-  'Foreman':       [1, 1, 0, 1, 1, 1, 1, 0, 1, 0],
-  'Warehouse':     [1, 0, 0, 1, 1, 1, 0, 0, 1, 0],
-  'Teknisi':       [1, 1, 0, 0, 0, 1, 1, 0, 1, 0]
+  'Administrator': [1,1,1,1,1,1,1],
+  'Supervisor':    [1,1,1,1,1,1,0],
+  'Admin':         [1,1,1,1,1,0,0],
+  'Visitor':       [1,0,0,0,1,0,0],
+  'Foreman':       [1,0,1,1,1,1,0],
+  'Warehouse':     [1,0,1,0,0,0,0],
+  'Teknisi':       [1,1,0,1,0,0,0]
 };
 
 const MENU_LINKS = [
   '/dashboard.html',
-  '/list-task.html',
   '/asset-register.html',
-  '/warehouse.html',
-  '/perkakas.html',
-  '/logistic-request.html',
-  '/schedule.html',
+  '/warehouse.html', // Master link for group
+  '/maintenance-planning.html', // Master link for group
   '/report.html',
   '/pekerja.html',
   '/settings.html'
@@ -35,8 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const navMenu = document.querySelector('.nav-menu');
   
   if (navMenu) {
-    const navItems = navMenu.querySelectorAll('a.nav-item');
-    navItems.forEach((item, index) => {
+    // Ambil top-level items: a.nav-item yang langsung di dalam .nav-menu DAN .nav-item-group
+    const topLevelItems = Array.from(navMenu.children).filter(el => 
+      (el.tagName === 'A' && el.classList.contains('nav-item')) || 
+      el.classList.contains('nav-item-group')
+    );
+    
+    topLevelItems.forEach((item, index) => {
       // Jika index valid dan bernilai 0, sembunyikan menu
       if (index < accessArray.length && accessArray[index] === 0) {
         item.style.display = 'none';

@@ -126,6 +126,27 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     );
 
+    // --- Role Toggle Item (For Simulation) ---
+    const roles = ['Administrator', 'Supervisor', 'Admin', 'Visitor', 'Foreman', 'Warehouse', 'Teknisi'];
+    let currentRole = localStorage.getItem('userRole') || 'Administrator';
+    
+    const roleItem = createMenuItem(
+      `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`,
+      'Simulasi Role',
+      `<div class="role-indicator" style="font-size: 0.75rem; font-weight:bold; color:var(--accent-primary); padding: 2px 6px; border-radius: 4px; background: rgba(255,112,67,0.1);">${currentRole}</div>`,
+      (el) => {
+        let currentIndex = roles.indexOf(currentRole);
+        if(currentIndex === -1) currentIndex = 0;
+        const nextRole = roles[(currentIndex + 1) % roles.length];
+        
+        localStorage.setItem('userRole', nextRole);
+        localStorage.setItem('userName', nextRole + ' User');
+        
+        el.querySelector('.role-indicator').innerHTML = nextRole;
+        window.location.reload();
+      }
+    );
+
     // --- Logout Item ---
     const logoutItem = createMenuItem(
       `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>`,
@@ -142,6 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Append items
     dropdown.appendChild(themeItem);
     dropdown.appendChild(langItem);
+    dropdown.appendChild(roleItem);
     dropdown.appendChild(logoutItem);
     userProfile.appendChild(dropdown);
 
@@ -239,4 +261,41 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   injectGoogleTranslate();
+
+  // 8. Mobile Sidebar Drawer Logic
+  const topbar = document.querySelector('.topbar');
+  const sidebar = document.querySelector('.sidebar');
+  if (topbar && sidebar) {
+    // Inject Hamburger Button at the start of Topbar
+    const hamburger = document.createElement('button');
+    hamburger.className = 'hamburger-btn';
+    hamburger.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
+    topbar.insertBefore(hamburger, topbar.firstChild);
+
+    // Inject Overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+
+    // Toggle logic
+    const toggleSidebar = () => {
+      document.body.classList.toggle('sidebar-open');
+    };
+
+    hamburger.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', () => {
+      document.body.classList.remove('sidebar-open');
+    });
+
+    // Close sidebar on link click (for mobile)
+    const navLinks = sidebar.querySelectorAll('.nav-item');
+    navLinks.forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+          document.body.classList.remove('sidebar-open');
+        }
+      });
+    });
+  }
 });
+

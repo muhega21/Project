@@ -302,10 +302,9 @@ function SettingsPage() {
                       <tr>
                         <th className="pb-3 font-medium">Level Pengguna</th>
                         <th className="pb-3 text-center font-medium">Dashboard</th>
-                        <th className="pb-3 text-center font-medium">Task List</th>
-                        <th className="pb-3 text-center font-medium">Asset Reg</th>
-                        <th className="pb-3 text-center font-medium">Warehouse</th>
-                        <th className="pb-3 text-center font-medium">Schedule</th>
+                        <th className="pb-3 text-center font-medium">Asset Register</th>
+                        <th className="pb-3 text-center font-medium">Warehouse & Sparepart</th>
+                        <th className="pb-3 text-center font-medium">Maintenance Planning</th>
                         <th className="pb-3 text-center font-medium">Report</th>
                         <th className="pb-3 text-center font-medium">Pekerja</th>
                         <th className="pb-3 text-center font-medium">Pengaturan</th>
@@ -313,13 +312,13 @@ function SettingsPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-800">
                       {[
-                        { role: 'Administrator', access: [1,1,1,1,1,1,1,1] },
-                        { role: 'Supervisor', access: [1,1,1,1,1,1,1,0] },
-                        { role: 'Admin', access: [1,1,1,1,1,0,1,0] },
-                        { role: 'Visitor', access: [1,0,0,0,0,0,1,0] },
-                        { role: 'Foreman', access: [1,1,0,1,1,0,1,0] },
-                        { role: 'Warehouse', access: [1,0,0,1,0,0,1,0] },
-                        { role: 'Teknisi', access: [1,1,0,0,1,0,1,0] },
+                        { role: 'Administrator', access: [1,1,1,1,1,1,1] },
+                        { role: 'Supervisor', access: [1,1,1,1,1,1,0] },
+                        { role: 'Admin', access: [1,1,1,1,1,0,0] },
+                        { role: 'Visitor', access: [1,0,0,0,1,0,0] },
+                        { role: 'Foreman', access: [1,0,1,1,1,1,0] },
+                        { role: 'Warehouse', access: [1,0,1,0,0,0,0] },
+                        { role: 'Teknisi', access: [1,1,0,1,0,0,0] },
                       ].map(r => (
                         <tr key={r.role} className="hover:bg-btn-secondary/50">
                           <td className="py-3 font-medium text-text-primary">{r.role}</td>

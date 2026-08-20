@@ -310,20 +310,6 @@ function ListTask() {
       {doneModal && <DoneModal plan={doneModal} onConfirm={(photos) => confirmDone(doneModal, photos)} onCancel={() => setDoneModal(null)}/>}
       {waitingModal && <WaitingModal plan={waitingModal} onConfirm={(reason) => confirmWaiting(waitingModal, reason)} onCancel={() => setWaitingModal(null)}/>}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-bg-surface p-4 rounded-xl border border-border-color shadow gap-3">
-        <div>
-          <h2 className="text-xl font-bold">Task List</h2>
-          <p className="text-sm text-text-secondary mt-0.5">Update progres pekerjaan maintenance</p>
-        </div>
-        <div className="flex gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={15}/>
-            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari task..." className="bg-bg-dark border border-border-color rounded-lg py-2 pl-8 pr-3 text-sm focus:outline-none focus:border-[#FF7043] w-48"/>
-          </div>
-          <a href="/maintenance-planning.html" className="bg-bg-dark border border-border-color hover:bg-btn-secondary text-text-primary px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">+ Rencana Baru</a>
-        </div>
-      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">

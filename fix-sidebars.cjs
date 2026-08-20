@@ -39,6 +39,7 @@ const standardSidebar = `
             <a href="/maintenance-planning.html" class="nav-item" style="height:36px;font-size:0.85rem">Perencanaan Maintenance</a>
             <a href="/maintenance-schedule.html" class="nav-item" style="height:36px;font-size:0.85rem">Jadwal Maintenance</a>
             <a href="/list-task.html" class="nav-item" style="height:36px;font-size:0.85rem">Task List</a>
+            <a href="/report-task-list.html" class="nav-item" style="height:36px;font-size:0.85rem">Report Task List</a>
             <a href="/work-order.html" class="nav-item" style="height:36px;font-size:0.85rem">Work Order</a>
           </div>
         </div>
@@ -57,7 +58,7 @@ const standardSidebar = `
 `;
 
 const warehousePages = ['warehouse.html', 'data-barang.html', 'data-gudang.html', 'transaksi-gudang.html', 'perkakas.html', 'data-alat.html', 'logistic-request.html'];
-const maintenancePages = ['maintenance-planning.html', 'maintenance-schedule.html', 'list-task.html', 'work-order.html'];
+const maintenancePages = ['maintenance-planning.html', 'maintenance-schedule.html', 'list-task.html', 'report-task-list.html', 'work-order.html'];
 
 htmlFiles.forEach(file => {
   const filePath = path.join(directory, file);

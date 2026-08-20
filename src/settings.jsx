@@ -300,36 +300,45 @@ function SettingsPage() {
                   <table className="w-full text-left text-sm whitespace-nowrap">
                     <thead className="text-text-secondary border-b border-border-color">
                       <tr>
-                        <th className="pb-3 font-medium">Level Pengguna</th>
-                        <th className="pb-3 text-center font-medium">Dashboard</th>
-                        <th className="pb-3 text-center font-medium">Asset Register</th>
-                        <th className="pb-3 text-center font-medium">Warehouse & Sparepart</th>
-                        <th className="pb-3 text-center font-medium">Maintenance Planning</th>
-                        <th className="pb-3 text-center font-medium">Report</th>
-                        <th className="pb-3 text-center font-medium">Pekerja</th>
-                        <th className="pb-3 text-center font-medium">Pengaturan</th>
+                        <th className="pb-3 font-medium">Menu / Fitur</th>
+                        <th className="pb-3 text-center font-medium">Administrator</th>
+                        <th className="pb-3 text-center font-medium">Supervisor</th>
+                        <th className="pb-3 text-center font-medium">Admin</th>
+                        <th className="pb-3 text-center font-medium">Visitor</th>
+                        <th className="pb-3 text-center font-medium">Foreman</th>
+                        <th className="pb-3 text-center font-medium">Warehouse</th>
+                        <th className="pb-3 text-center font-medium">Teknisi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
                       {[
-                        { role: 'Administrator', access: [1,1,1,1,1,1,1] },
-                        { role: 'Supervisor', access: [1,1,1,1,1,1,0] },
-                        { role: 'Admin', access: [1,1,1,1,1,0,0] },
-                        { role: 'Visitor', access: [1,0,0,0,1,0,0] },
-                        { role: 'Foreman', access: [1,0,1,1,1,1,0] },
-                        { role: 'Warehouse', access: [1,0,1,0,0,0,0] },
-                        { role: 'Teknisi', access: [1,1,0,1,0,0,0] },
-                      ].map(r => (
-                        <tr key={r.role} className="hover:bg-btn-secondary/50">
-                          <td className="py-3 font-medium text-text-primary">{r.role}</td>
-                          {r.access.map((val, idx) => (
+                        { menu: 'Dashboard', accesses: [1, 1, 1, 1, 1, 1, 1], isSub: false },
+                        { menu: 'Asset Register', accesses: [1, 1, 1, 0, 0, 0, 1], isSub: false },
+                        { menu: 'Warehouse & Sparepart', accesses: [1, 1, 1, 0, 1, 1, 0], isSub: false },
+                        { menu: 'Dashboard Warehouse', accesses: [1, 1, 1, 0, 1, 1, 0], isSub: true },
+                        { menu: 'Data Barang', accesses: [1, 1, 1, 0, 1, 1, 0], isSub: true },
+                        { menu: 'Data Gudang', accesses: [1, 1, 1, 0, 1, 1, 0], isSub: true },
+                        { menu: 'Transaksi Gudang', accesses: [1, 1, 1, 0, 0, 1, 0], isSub: true },
+                        { menu: 'Gudang Perkakas', accesses: [1, 1, 1, 0, 1, 1, 0], isSub: true },
+                        { menu: 'Data Alat (Perkakas)', accesses: [1, 1, 1, 0, 1, 1, 0], isSub: true },
+                        { menu: 'Permintaan Logistik', accesses: [1, 1, 1, 0, 1, 1, 0], isSub: true },
+                        { menu: 'Maintenance Planning', accesses: [1, 1, 1, 1, 1, 0, 1], isSub: false },
+                        { menu: 'Perencanaan Maintenance', accesses: [1, 1, 1, 1, 1, 0, 0], isSub: true },
+                        { menu: 'Jadwal Maintenance', accesses: [1, 1, 1, 1, 1, 0, 1], isSub: true },
+                        { menu: 'Task List', accesses: [1, 1, 1, 1, 1, 0, 1], isSub: true },
+                        { menu: 'Report Task List', accesses: [1, 1, 1, 1, 1, 0, 0], isSub: true },
+                        { menu: 'Work Order', accesses: [1, 1, 1, 0, 1, 0, 1], isSub: true },
+                        { menu: 'Report', accesses: [1, 1, 0, 0, 1, 0, 0], isSub: false },
+                        { menu: 'Pekerja', accesses: [1, 1, 0, 0, 1, 0, 0], isSub: false },
+                        { menu: 'Pengaturan', accesses: [1, 0, 0, 0, 0, 0, 0], isSub: false },
+                      ].map(row => (
+                        <tr key={row.menu} className={`hover:bg-btn-secondary/50 ${row.isSub ? 'text-text-secondary' : 'text-text-primary'}`}>
+                          <td className={`py-3 font-medium ${row.isSub ? 'pl-6 text-xs' : ''}`}>{row.menu}</td>
+                          {row.accesses.map((val, idx) => (
                             <td key={idx} className="py-3 text-center">
-                              <input 
-                                type="checkbox" 
-                                defaultChecked={val === 1} 
-                                disabled={r.role === 'Administrator'} 
-                                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-accent focus:ring-[#FF7043] focus:ring-offset-[#12161A] accent-[#FF7043]" 
-                              />
+                              <div className="flex justify-center">
+                                <ToggleSwitch defaultChecked={val === 1} disabled={idx === 0} size="sm" />
+                              </div>
                             </td>
                           ))}
                         </tr>
@@ -472,14 +481,21 @@ function SettingRow({ label, desc, children }) {
   );
 }
 
-function ToggleSwitch({ defaultChecked = false }) {
+function ToggleSwitch({ defaultChecked = false, disabled = false, size = 'md' }) {
   const [on, setOn] = useState(defaultChecked);
+  
+  const isSm = size === 'sm';
+  const width = isSm ? 'w-8' : 'w-12';
+  const height = isSm ? 'h-4' : 'h-6';
+  const knob = isSm ? 'w-3 h-3' : 'w-5 h-5';
+  
   return (
     <button 
-      onClick={() => setOn(!on)}
-      className={`relative w-12 h-6 rounded-full transition-colors ${on ? 'bg-[#FF7043]' : 'bg-gray-600'}`}
+      onClick={() => { if (!disabled) setOn(!on); }}
+      disabled={disabled}
+      className={`relative ${width} ${height} rounded-full transition-colors flex items-center px-0.5 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${on ? 'bg-[#FF7043]' : 'bg-gray-600'}`}
     >
-      <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-0.5'}`} />
+      <div className={`bg-white rounded-full shadow transition-transform ${knob}`} style={{ transform: on ? `translateX(${isSm ? '16px' : '24px'})` : 'translateX(0)' }} />
     </button>
   );
 }

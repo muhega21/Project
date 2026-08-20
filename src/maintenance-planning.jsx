@@ -49,6 +49,8 @@ function MaintenancePlanning() {
   const [assetSearch, setAssetSearch]           = useState('');
   const [showAssetDropdown, setShowAssetDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterArea, setFilterArea] = useState('All');
+  const [filterFreq, setFilterFreq] = useState('All');
   const [selectedPlan, setSelectedPlan] = useState(null); // row-click detail panel
   const [detailForm, setDetailForm]     = useState(null); // editable copy
 
@@ -100,12 +102,18 @@ function MaintenancePlanning() {
     return true;
   });
 
-  const filteredPlans = plans.filter(p =>
-    p.assetName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.taskDescription?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.areaName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.id?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPlans = plans.filter(p => {
+    const matchSearch = !searchQuery || 
+      p.assetName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.taskDescription?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.areaName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.id?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchArea = filterArea === 'All' || p.areaName === filterArea;
+    const matchFreq = filterFreq === 'All' || p.frequency === filterFreq;
+    return matchSearch && matchArea && matchFreq;
+  });
+
+  const uniqueAreas = Array.from(new Set(plans.map(p => p.areaName))).filter(Boolean).sort();
 
   const handleSelectAsset = (asset) => {
     setForm(prev => ({
@@ -210,6 +218,16 @@ function MaintenancePlanning() {
           <p className="text-sm text-text-secondary mt-0.5">Kelola rencana pemeliharaan rutin untuk setiap Asset &amp; Equipment</p>
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
+          <select value={filterArea} onChange={e => setFilterArea(e.target.value)}
+            className="bg-bg-dark border border-border-color rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-[#FF7043] appearance-none max-w-[150px] truncate hidden md:block">
+            <option value="All">Semua Lokasi</option>
+            {uniqueAreas.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <select value={filterFreq} onChange={e => setFilterFreq(e.target.value)}
+            className="bg-bg-dark border border-border-color rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-[#FF7043] appearance-none max-w-[150px] truncate hidden md:block">
+            <option value="All">Semua Interval</option>
+            {FREQUENCY_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
             <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -273,12 +291,11 @@ function MaintenancePlanning() {
                   <th className="px-3 py-3 font-medium">Task Description</th>
                   <th className="px-3 py-3 font-medium">Frequency</th>
                   <th className="px-3 py-3 font-medium">Start Date</th>
-                  <th className="px-3 py-3 font-medium">PIC/Pekerja</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-color">
                 {filteredPlans.length === 0 ? (
-                  <tr><td colSpan="10" className="px-6 py-12 text-center text-text-secondary">Belum ada rencana maintenance. Klik "+ Tambah Task Description" untuk mulai.</td></tr>
+                  <tr><td colSpan="9" className="px-6 py-12 text-center text-text-secondary">Belum ada rencana maintenance. Klik "+ Tambah Task Description" untuk mulai.</td></tr>
                 ) : filteredPlans.map((plan, idx) => {
                   const isSelected = selectedPlan?.id === plan.id;
                   return (
@@ -303,7 +320,6 @@ function MaintenancePlanning() {
                       <td className="px-3 py-3 text-text-secondary max-w-[180px] truncate" title={plan.taskDescription}>{plan.taskDescription}</td>
                       <td className="px-3 py-3">{getFrequencyBadge(plan.frequency)}</td>
                       <td className="px-3 py-3 text-text-secondary text-xs">{plan.startDate}</td>
-                      <td className="px-3 py-3 text-text-secondary">{plan.pic || '-'}</td>
                     </tr>
                   );
                 })}
@@ -391,22 +407,6 @@ function MaintenancePlanning() {
                 <input type="date" value={detailForm.startDate}
                   onChange={e => setDetailForm(prev => ({ ...prev, startDate: e.target.value }))}
                   className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043]" />
-              </div>
-
-              <div>
-                <label className="block text-xs text-text-secondary mb-1">PIC / Pekerja</label>
-                {workers.length > 0 ? (
-                  <select value={detailForm.pic || ''}
-                    onChange={e => setDetailForm(prev => ({ ...prev, pic: e.target.value }))}
-                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043] appearance-none">
-                    <option value="">— Pilih Teknisi —</option>
-                    {workers.map(w => <option key={w.id} value={w.nama}>{w.nama}</option>)}
-                  </select>
-                ) : (
-                  <input type="text" value={detailForm.pic || ''} placeholder="Nama PIC / Teknisi"
-                    onChange={e => setDetailForm(prev => ({ ...prev, pic: e.target.value }))}
-                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043]" />
-                )}
               </div>
 
               {/* Next date preview */}
@@ -555,22 +555,6 @@ function MaintenancePlanning() {
                     onChange={e => setForm(prev => ({ ...prev, startDate: e.target.value }))}
                     className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043]" />
                 </div>
-              </div>
-
-              {/* PIC */}
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">PIC (Teknisi/Penanggung Jawab)</label>
-                {workers.length > 0 ? (
-                  <select value={form.pic} onChange={e => setForm(prev => ({ ...prev, pic: e.target.value }))}
-                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043] appearance-none">
-                    <option value="">— Pilih Teknisi —</option>
-                    {workers.map(w => <option key={w.id} value={w.nama}>{w.nama} ({w.posisi})</option>)}
-                  </select>
-                ) : (
-                  <input type="text" value={form.pic} placeholder="Nama teknisi / PIC..."
-                    onChange={e => setForm(prev => ({ ...prev, pic: e.target.value }))}
-                    className="w-full bg-bg-dark border border-border-color rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF7043]" />
-                )}
               </div>
 
               {form.startDate && form.frequency && (

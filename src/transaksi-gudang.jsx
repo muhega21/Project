@@ -245,7 +245,7 @@ function TransaksiGudang() {
   });
 
   const handleDownload = () => {
-    const headers = ['Tanggal', 'ID Transaksi', 'Tipe', 'Kode Barang', 'Nama Barang', 'Jumlah', 'Lokasi Gudang', 'Pekerja/PIC', 'Keterangan'];
+    const headers = ['Tanggal', 'ID Transaksi', 'Tipe', 'Nama Barang', 'Jumlah', 'Lokasi Gudang', 'Pekerja/PIC', 'Keterangan'];
     const csvRows = [];
     csvRows.push(headers.join(','));
 
@@ -255,12 +255,11 @@ function TransaksiGudang() {
         trx.date,
         trx.id,
         type,
-        trx.itemId,
         `"${trx.itemName}"`,
         trx.qty,
         `"${trx.gudang || '-'}"`,
         `"${trx.worker}"`,
-        `"${trx.notes.replace(/"/g, '""')}"`
+        `"${trx.notes || '-'}"`
       ];
       csvRows.push(row.join(','));
     });
@@ -403,7 +402,6 @@ function TransaksiGudang() {
                 <th className="px-4 py-3 font-medium">Tanggal</th>
                 <th className="px-4 py-3 font-medium">ID Transaksi</th>
                 <th className="px-4 py-3 font-medium">Tipe</th>
-                <th className="px-4 py-3 font-medium">Kode Barang</th>
                 <th className="px-4 py-3 font-medium">Nama Barang</th>
                 <th className="px-4 py-3 font-medium text-center">Jumlah</th>
                 <th className="px-4 py-3 font-medium">Lokasi Gudang</th>
@@ -427,7 +425,6 @@ function TransaksiGudang() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 font-mono text-blue-400 font-medium">{trx.itemId}</td>
                   <td className="px-4 py-3 text-text-primary">{trx.itemName}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={`font-bold ${trx.type === 'in' ? 'text-green-500' : 'text-orange-500'}`}>

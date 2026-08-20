@@ -93,24 +93,29 @@ function PekerjaApp() {
     saveWorkers(updated);
   };
 
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newWorkerData, setNewWorkerData] = useState({
+    nama: '', nik: '', email: '', password: '', perusahaan: '', profilAkun: 'Teknisi', posisi: '', status: 'On Site'
+  });
+
   const handleAddWorker = () => {
-    const newNama = prompt('Nama Pekerja Baru:');
-    if (!newNama) return;
+    setNewWorkerData({
+      nama: '', nik: '', email: '', password: '', perusahaan: '', profilAkun: 'Teknisi', posisi: '', status: 'On Site'
+    });
+    setShowAddModal(true);
+  };
+
+  const submitAddWorker = (e) => {
+    e.preventDefault();
     const newWorker = {
       id: Date.now(),
-      nama: newNama,
-      nik: `100${Math.floor(Math.random() * 900) + 100}`,
-      email: `${newNama.toLowerCase().replace(/\s/g, '')}@maintainx.com`,
-      password: 'password123',
-      perusahaan: 'PT. Maju Jaya',
-      profilAkun: 'Teknisi',
-      posisi: 'Staff Baru',
+      ...newWorkerData,
       negara: 'ID',
       noHandphone: '-',
-      foto: null,
-      status: 'On Site'
+      foto: null
     };
     saveWorkers([...workers, newWorker]);
+    setShowAddModal(false);
   };
 
   return (
@@ -296,6 +301,81 @@ function PekerjaApp() {
           isAdmin={isAdmin}
         />
       )}
+
+      {/* Modal Tambah Pekerja */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-bg-surface border border-border-color rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-border-color flex justify-between items-center sticky top-0 bg-bg-surface z-10">
+              <h2 className="text-xl font-bold text-text-primary flex items-center gap-2">
+                <Plus size={24} className="text-accent" /> Tambah Pekerja Baru
+              </h2>
+              <button onClick={() => setShowAddModal(false)} className="text-text-secondary hover:text-text-primary transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={submitAddWorker} className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-text-secondary">Nama Lengkap</label>
+                  <input required type="text" value={newWorkerData.nama} onChange={(e) => setNewWorkerData({...newWorkerData, nama: e.target.value})} className="w-full bg-bg-dark border border-border-color text-text-primary rounded-lg p-2.5 focus:border-accent outline-none" placeholder="Masukkan nama..." />
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-text-secondary">NIK</label>
+                  <input required type="text" value={newWorkerData.nik} onChange={(e) => setNewWorkerData({...newWorkerData, nik: e.target.value})} className="w-full bg-bg-dark border border-border-color text-text-primary rounded-lg p-2.5 focus:border-accent outline-none" placeholder="Masukkan NIK..." />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-text-secondary">Email</label>
+                  <input required type="email" value={newWorkerData.email} onChange={(e) => setNewWorkerData({...newWorkerData, email: e.target.value})} className="w-full bg-bg-dark border border-border-color text-text-primary rounded-lg p-2.5 focus:border-accent outline-none" placeholder="email@contoh.com" />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-text-secondary">Password Awal</label>
+                  <input required type="text" value={newWorkerData.password} onChange={(e) => setNewWorkerData({...newWorkerData, password: e.target.value})} className="w-full bg-bg-dark border border-border-color text-text-primary rounded-lg p-2.5 focus:border-accent outline-none" placeholder="Password untuk akun ini..." />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-text-secondary">Perusahaan</label>
+                  <input required type="text" value={newWorkerData.perusahaan} onChange={(e) => setNewWorkerData({...newWorkerData, perusahaan: e.target.value})} className="w-full bg-bg-dark border border-border-color text-text-primary rounded-lg p-2.5 focus:border-accent outline-none" placeholder="Nama perusahaan..." />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-text-secondary">Posisi / Jabatan</label>
+                  <input required type="text" value={newWorkerData.posisi} onChange={(e) => setNewWorkerData({...newWorkerData, posisi: e.target.value})} className="w-full bg-bg-dark border border-border-color text-text-primary rounded-lg p-2.5 focus:border-accent outline-none" placeholder="Contoh: Teknisi Listrik" />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-text-secondary">Profil Akun (Role)</label>
+                  <select value={newWorkerData.profilAkun} onChange={(e) => setNewWorkerData({...newWorkerData, profilAkun: e.target.value})} className="w-full bg-bg-dark border border-border-color text-text-primary rounded-lg p-2.5 focus:border-accent outline-none appearance-none">
+                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-text-secondary">Status Awal</label>
+                  <select value={newWorkerData.status} onChange={(e) => setNewWorkerData({...newWorkerData, status: e.target.value})} className="w-full bg-bg-dark border border-border-color text-text-primary rounded-lg p-2.5 focus:border-accent outline-none appearance-none">
+                    <option value="On Site">On Site</option>
+                    <option value="Off Site">Off Site</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-6 border-t border-border-color">
+                <button type="button" onClick={() => setShowAddModal(false)} className="px-5 py-2.5 text-text-secondary hover:text-text-primary font-medium transition-colors">
+                  Batal
+                </button>
+                <button type="submit" className="bg-gradient-to-r from-accent to-accent-secondary text-text-primary px-6 py-2.5 rounded-lg font-medium shadow-lg hover:opacity-90 flex items-center gap-2">
+                  <Check size={18} /> Tambah Pekerja
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

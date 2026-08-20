@@ -26,7 +26,9 @@ const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
 
 function MaintenanceSchedule() {
   const [plans, setPlans] = useState([]);
-  const [filterFreq, setFilterFreq] = useState('All');
+  const [workers, setWorkers] = useState([]);
+  const [timeToggle, setTimeToggle] = useState('All');
+  const [customDateFilter, setCustomDateFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'calendar'
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -43,7 +45,18 @@ function MaintenanceSchedule() {
       ];
       setPlans(defaults);
     }
+    
+    const savedWorkers = localStorage.getItem('mx_workers');
+    if (savedWorkers) {
+      setWorkers(JSON.parse(savedWorkers));
+    }
   }, []);
+
+  const updatePic = (planId, newPic) => {
+    const updated = plans.map(p => p.id === planId ? { ...p, pic: newPic } : p);
+    setPlans(updated);
+    localStorage.setItem('mx_maintenance_plans', JSON.stringify(updated));
+  };
 
   const isOverdue = (nextDate) => nextDate && new Date(nextDate) < new Date();
   const isDueThisWeek = (nextDate) => {
@@ -54,14 +67,62 @@ function MaintenanceSchedule() {
     return nd >= today && nd <= weekAhead;
   };
 
+  const formatDate = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const today = new Date();
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const isScheduledOnDate = (startDateStr, frequency, targetDateStr) => {
+    if (!startDateStr || !targetDateStr) return false;
+    const start = new Date(startDateStr); start.setHours(0,0,0,0);
+    const target = new Date(targetDateStr); target.setHours(0,0,0,0);
+    
+    if (target < start) return false;
+    
+    const diffTime = target - start;
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    switch (frequency) {
+      case 'Daily': return true;
+      case 'Weekly': return diffDays % 7 === 0;
+      case 'Monthly': return start.getDate() === target.getDate();
+      case 'Quarterly': {
+        const monthDiff = (target.getFullYear() - start.getFullYear()) * 12 + target.getMonth() - start.getMonth();
+        return start.getDate() === target.getDate() && monthDiff % 3 === 0;
+      }
+      case 'Semester': {
+        const monthDiff = (target.getFullYear() - start.getFullYear()) * 12 + target.getMonth() - start.getMonth();
+        return start.getDate() === target.getDate() && monthDiff % 6 === 0;
+      }
+      case 'Annual': return start.getDate() === target.getDate() && start.getMonth() === target.getMonth();
+      case 'Trienial': return start.getDate() === target.getDate() && start.getMonth() === target.getMonth() && (target.getFullYear() - start.getFullYear()) % 3 === 0;
+      case 'Quinquenial': return start.getDate() === target.getDate() && start.getMonth() === target.getMonth() && (target.getFullYear() - start.getFullYear()) % 5 === 0;
+      default: return false;
+    }
+  };
+
   const filtered = plans.filter(p => {
-    const matchFreq = filterFreq === 'All' || p.frequency === filterFreq;
     const matchSearch = !searchQuery ||
       p.assetName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.areaName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.taskDescription.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchFreq && matchSearch;
+      
+    let matchTime = true;
+    if (timeToggle === 'Today') matchTime = isScheduledOnDate(p.startDate, p.frequency, formatDate(today));
+    else if (timeToggle === 'Yesterday') matchTime = isScheduledOnDate(p.startDate, p.frequency, formatDate(yesterday));
+    else if (timeToggle === 'Tomorrow') matchTime = isScheduledOnDate(p.startDate, p.frequency, formatDate(tomorrow));
+    else if (timeToggle === 'Custom' && customDateFilter) matchTime = isScheduledOnDate(p.startDate, p.frequency, customDateFilter);
+
+    return matchSearch && matchTime;
   });
+
+  const uniqueAreas = Array.from(new Set(plans.map(p => p.areaName))).sort();
 
   const getFrequencyBadge = (freq) => {
     const colors = {
@@ -116,29 +177,26 @@ function MaintenanceSchedule() {
     <div className="flex flex-col h-full gap-4 text-text-primary font-sans">
 
       {/* Action Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-bg-surface p-4 rounded-xl border border-border-color shadow gap-3">
-        <div>
-          <h2 className="text-xl font-bold">Jadwal Maintenance</h2>
-          <p className="text-sm text-text-secondary mt-0.5">Jadwal maintenance berdasarkan Task Description dari Perencanaan</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <div className="relative">
+      <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center bg-bg-surface p-4 rounded-xl border border-border-color shadow gap-3">
+        <div className="flex gap-3 flex-wrap items-center w-full">
+          <div className="flex border border-border-color rounded-lg overflow-hidden shrink-0">
+            <button onClick={() => { setTimeToggle('All'); setCustomDateFilter(''); }} className={`px-3 py-2 text-sm font-medium transition-colors ${timeToggle === 'All' && !customDateFilter ? 'bg-[#FF7043] text-white' : 'bg-bg-dark text-text-secondary hover:bg-btn-secondary'}`}>Semua</button>
+            <button onClick={() => { setTimeToggle('Yesterday'); setCustomDateFilter(''); }} className={`px-3 py-2 text-sm font-medium transition-colors ${timeToggle === 'Yesterday' ? 'bg-[#FF7043] text-white' : 'bg-bg-dark text-text-secondary hover:bg-btn-secondary'}`}>Kemarin</button>
+            <button onClick={() => { setTimeToggle('Today'); setCustomDateFilter(''); }} className={`px-3 py-2 text-sm font-medium transition-colors ${timeToggle === 'Today' ? 'bg-[#FF7043] text-white' : 'bg-bg-dark text-text-secondary hover:bg-btn-secondary'}`}>Hari Ini</button>
+            <button onClick={() => { setTimeToggle('Tomorrow'); setCustomDateFilter(''); }} className={`px-3 py-2 text-sm font-medium transition-colors ${timeToggle === 'Tomorrow' ? 'bg-[#FF7043] text-white' : 'bg-bg-dark text-text-secondary hover:bg-btn-secondary'}`}>Besok</button>
+          </div>
+          
+          <input type="date" value={customDateFilter} onChange={(e) => { setCustomDateFilter(e.target.value); setTimeToggle('Custom'); }} className="bg-bg-dark border border-border-color rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-[#FF7043] shrink-0" title="Filter Tanggal" />
+          
+          <div className="relative shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={15} />
             <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Cari jadwal..." className="bg-bg-dark border border-border-color rounded-lg py-2 pl-8 pr-3 text-sm focus:outline-none focus:border-[#FF7043] w-48" />
+              placeholder="Cari jadwal..." className="bg-bg-dark border border-border-color rounded-lg py-2 pl-8 pr-3 text-sm focus:outline-none focus:border-[#FF7043] w-40 sm:w-48" />
           </div>
-          <select value={filterFreq} onChange={e => setFilterFreq(e.target.value)}
-            className="bg-bg-dark border border-border-color rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-[#FF7043] appearance-none">
-            <option value="All">Semua Interval</option>
-            {FREQUENCY_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
-          <div className="flex border border-border-color rounded-lg overflow-hidden">
+          <div className="flex border border-border-color rounded-lg overflow-hidden shrink-0">
             <button onClick={() => setViewMode('table')} className={`px-3 py-2 text-sm transition-colors ${viewMode === 'table' ? 'bg-[#FF7043] text-white' : 'bg-bg-dark text-text-secondary hover:bg-btn-secondary'}`}>Tabel</button>
             <button onClick={() => setViewMode('calendar')} className={`px-3 py-2 text-sm transition-colors ${viewMode === 'calendar' ? 'bg-[#FF7043] text-white' : 'bg-bg-dark text-text-secondary hover:bg-btn-secondary'}`}>Kalender</button>
           </div>
-          <a href="/maintenance-planning.html" className="bg-bg-dark border border-border-color hover:bg-btn-secondary text-text-primary px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5">
-            + Tambah Rencana
-          </a>
         </div>
       </div>
 
@@ -164,39 +222,38 @@ function MaintenanceSchedule() {
       {viewMode === 'table' ? (
         <div className="bg-bg-surface rounded-xl border border-border-color shadow overflow-hidden flex-1 flex flex-col">
           <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left text-sm whitespace-nowrap">
+            <table className="w-full text-left text-sm">
               <thead className="bg-bg-dark text-text-secondary border-b border-border-color">
                 <tr>
-                  <th className="px-4 py-3 font-medium">ID Lokasi</th>
+                  <th className="px-4 py-3 font-medium">Kode Area/Lokasi (Plant)</th>
                   <th className="px-4 py-3 font-medium">Nama Lokasi/Area</th>
                   <th className="px-4 py-3 font-medium">Nama Asset</th>
                   <th className="px-4 py-3 font-medium">Task Description</th>
                   <th className="px-4 py-3 font-medium">Frequency / Interval</th>
-                  <th className="px-4 py-3 font-medium">Start Date</th>
-                  <th className="px-4 py-3 font-medium">Next Date Maintenance</th>
                   <th className="px-4 py-3 font-medium">PIC</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-color">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan="9" className="px-6 py-12 text-center text-text-secondary">Tidak ada jadwal yang ditemukan.</td></tr>
+                  <tr><td colSpan="7" className="px-6 py-12 text-center text-text-secondary">Tidak ada jadwal yang ditemukan.</td></tr>
                 ) : filtered.map(plan => (
                   <tr key={plan.id} className={`hover:bg-btn-secondary/50 transition-colors ${isOverdue(plan.nextDate) ? 'bg-red-500/5' : ''}`}>
-                    <td className="px-4 py-3 text-text-secondary">{plan.areaId}</td>
+                    <td className="px-4 py-3 text-text-secondary">{plan.plantCode || plan.areaId || '-'}</td>
                     <td className="px-4 py-3 font-medium">{plan.areaName}</td>
                     <td className="px-4 py-3 font-medium">{plan.assetName}</td>
-                    <td className="px-4 py-3 text-text-secondary max-w-[200px] truncate" title={plan.taskDescription}>{plan.taskDescription}</td>
+                    <td className="px-4 py-3 text-text-secondary whitespace-normal min-w-[200px]">{plan.taskDescription}</td>
                     <td className="px-4 py-3">{getFrequencyBadge(plan.frequency)}</td>
-                    <td className="px-4 py-3 text-text-secondary">{plan.startDate}</td>
                     <td className="px-4 py-3">
-                      <span className={isOverdue(plan.nextDate) ? 'text-red-400 font-semibold' : isDueThisWeek(plan.nextDate) ? 'text-orange-400 font-semibold' : 'text-text-secondary'}>
-                        {plan.nextDate}
-                        {isOverdue(plan.nextDate) && <span className="ml-2 text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">OVERDUE</span>}
-                        {!isOverdue(plan.nextDate) && isDueThisWeek(plan.nextDate) && <span className="ml-2 text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded">SOON</span>}
-                      </span>
+                      <select 
+                        value={plan.pic || ''} 
+                        onChange={(e) => updatePic(plan.id, e.target.value)}
+                        className="bg-bg-dark border border-border-color rounded p-1 text-xs focus:outline-none focus:border-[#FF7043]"
+                      >
+                        <option value="">— Pilih PIC —</option>
+                        {workers.map(w => <option key={w.id} value={w.nama}>{w.nama}</option>)}
+                      </select>
                     </td>
-                    <td className="px-4 py-3 text-text-secondary">{plan.pic || '-'}</td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">{plan.status}</span>
                     </td>

@@ -1,12 +1,23 @@
 import { eq, lte } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import { warehouseItems, warehouseTransactions, logisticRequests } from '../db/schema.js';
+import {
+  warehouseItems,
+  warehouseTransactions,
+  logisticRequests,
+} from '../db/tenant-schema.js';
 
+/**
+ * Semua controller di sini menggunakan req.tenantDb
+ * yang disuntikkan oleh middleware tenantResolver.
+ */
+
+// ----------------------------------------------------------------
 // 1. Data Master & Inventaris Gudang
+// ----------------------------------------------------------------
+
 export const getAssets = async (req, res) => {
   try {
-    const assets = await db.select().from(warehouseItems);
-    res.json(assets);
+    const items = req.tenantDb.select().from(warehouseItems).all();
+    res.json(items);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -15,8 +26,8 @@ export const getAssets = async (req, res) => {
 export const createAsset = async (req, res) => {
   try {
     const item = req.body;
-    await db.insert(warehouseItems).values(item);
-    res.status(201).json({ message: 'Asset created successfully' });
+    req.tenantDb.insert(warehouseItems).values(item).run();
+    res.status(201).json({ message: 'Item berhasil ditambahkan' });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -26,8 +37,8 @@ export const updateAsset = async (req, res) => {
   try {
     const { id } = req.params;
     const item = req.body;
-    await db.update(warehouseItems).set(item).where(eq(warehouseItems.id, id));
-    res.json({ message: 'Asset updated successfully' });
+    req.tenantDb.update(warehouseItems).set(item).where(eq(warehouseItems.id, id)).run();
+    res.json({ message: 'Item berhasil diperbarui' });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -36,149 +47,121 @@ export const updateAsset = async (req, res) => {
 export const deleteAsset = async (req, res) => {
   try {
     const { id } = req.params;
-    await db.delete(warehouseItems).where(eq(warehouseItems.id, id));
-    res.json({ message: 'Asset deleted successfully' });
+    req.tenantDb.delete(warehouseItems).where(eq(warehouseItems.id, id)).run();
+    res.json({ message: 'Item berhasil dihapus' });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 };
 
-// 2. Manajemen Transaksi & Stok (In/Out)
-export const stockIn = async (req, res) => {
+export const getLowStockItems = async (req, res) => {
   try {
-    const trxData = req.body; // id, date, type='in', itemId, itemName, qty, worker, notes
-    
-    await db.transaction(async (tx) => {
-      // 1. Catat transaksi
-      await tx.insert(warehouseTransactions).values(trxData);
-      
-      // 2. Ambil stok saat ini
-      const [item] = await tx.select().from(warehouseItems).where(eq(warehouseItems.id, trxData.itemId));
-      if (!item) throw new Error('Item not found');
-      
-      // 3. Tambah stok
-      await tx.update(warehouseItems).set({ qty: item.qty + trxData.qty }).where(eq(warehouseItems.id, trxData.itemId));
-    });
-    
-    res.status(201).json({ message: 'Stock In recorded successfully' });
+    const items = req.tenantDb
+      .select()
+      .from(warehouseItems)
+      .where(lte(warehouseItems.qty, warehouseItems.minQty))
+      .all();
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ----------------------------------------------------------------
+// 2. Transaksi Gudang (In/Out)
+// ----------------------------------------------------------------
+
+export const getTransactions = async (req, res) => {
+  try {
+    const transactions = req.tenantDb.select().from(warehouseTransactions).all();
+    res.json(transactions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const createTransaction = async (req, res) => {
+  try {
+    const { id, date, type, itemId, itemName, qty, worker, notes, referenceId } = req.body;
+
+    // Update stok
+    const item = req.tenantDb
+      .select()
+      .from(warehouseItems)
+      .where(eq(warehouseItems.id, itemId))
+      .get();
+
+    if (!item) {
+      return res.status(404).json({ error: 'Item tidak ditemukan' });
+    }
+
+    const newQty = type === 'in' ? item.qty + qty : item.qty - qty;
+    if (newQty < 0) {
+      return res.status(400).json({ error: 'Stok tidak cukup untuk transaksi keluar' });
+    }
+
+    req.tenantDb.transaction(() => {
+      req.tenantDb
+        .update(warehouseItems)
+        .set({ qty: newQty })
+        .where(eq(warehouseItems.id, itemId))
+        .run();
+
+      req.tenantDb.insert(warehouseTransactions).values({
+        id,
+        date,
+        type,
+        itemId,
+        itemName,
+        qty,
+        worker: worker || req.user?.workerId || 'Unknown',
+        notes,
+        referenceId,
+      }).run();
+    })();
+
+    res.status(201).json({ message: 'Transaksi berhasil dicatat', newQty });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 };
 
-export const stockOut = async (req, res) => {
-  try {
-    const trxData = req.body;
-    
-    await db.transaction(async (tx) => {
-      // 1. Ambil dan kunci row item
-      const [item] = await tx.select().from(warehouseItems).where(eq(warehouseItems.id, trxData.itemId));
-      if (!item) throw new Error('Item not found');
-      
-      // 2. Validasi Anti Race-Condition: Stok minus
-      if (item.qty < trxData.qty) {
-        throw new Error(`Insufficient stock. Current stock: ${item.qty}, Requested: ${trxData.qty}`);
-      }
-      
-      // 3. Catat transaksi
-      await tx.insert(warehouseTransactions).values(trxData);
-      
-      // 4. Kurangi stok
-      await tx.update(warehouseItems).set({ qty: item.qty - trxData.qty }).where(eq(warehouseItems.id, trxData.itemId));
-    });
-    
-    res.status(201).json({ message: 'Stock Out recorded successfully' });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
+// ----------------------------------------------------------------
+// 3. Permintaan Logistik
+// ----------------------------------------------------------------
 
-// 3. Integrasi & Notifikasi dari Permintaan Logistik
-export const getRequests = async (req, res) => {
+export const getLogisticRequests = async (req, res) => {
   try {
-    const requests = await db.select().from(logisticRequests);
+    const requests = req.tenantDb.select().from(logisticRequests).all();
     res.json(requests);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const approveRequest = async (req, res) => {
+export const createLogisticRequest = async (req, res) => {
   try {
-    const { id } = req.params;
-    
-    await db.transaction(async (tx) => {
-      const [request] = await tx.select().from(logisticRequests).where(eq(logisticRequests.id, id));
-      if (!request) throw new Error('Request not found');
-      if (request.status === 'Approved') throw new Error('Request is already approved');
-      
-      // Cari Item di inventory berdasarkan nama (atau id jika formatnya disesuaikan)
-      // Dalam request, kita anggap 'item' menyimpan Nama atau ID
-      // Coba cari berdasarkan ID (asumsi 'item' menyimpan id, atau nama)
-      const items = await tx.select().from(warehouseItems);
-      const targetItem = items.find(i => i.id === request.item || i.name.toLowerCase() === request.item.toLowerCase());
-      
-      if (!targetItem) {
-        throw new Error(`Item ${request.item} not found in inventory.`);
-      }
-
-      if (targetItem.qty < request.quantity) {
-        throw new Error(`Insufficient stock to approve this request. Stock: ${targetItem.qty}`);
-      }
-
-      // Kurangi stok
-      await tx.update(warehouseItems).set({ qty: targetItem.qty - request.quantity }).where(eq(warehouseItems.id, targetItem.id));
-      
-      // Update status
-      await tx.update(logisticRequests).set({ status: 'Approved' }).where(eq(logisticRequests.id, id));
-      
-      // Buat riwayat Stock Out otomatis
-      await tx.insert(warehouseTransactions).values({
-        id: `BK-${Date.now()}`,
-        date: new Date().toISOString(),
-        type: 'out',
-        itemId: targetItem.id,
-        itemName: targetItem.name,
-        qty: request.quantity,
-        worker: request.nik,
-        notes: `Approved Request: ${request.purpose}`,
-        referenceId: request.id
-      });
-    });
-    
-    res.json({ message: 'Request approved and stock deducted successfully' });
+    const data = req.body;
+    req.tenantDb.insert(logisticRequests).values(data).run();
+    res.status(201).json({ message: 'Permintaan logistik berhasil dibuat' });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 };
 
-export const rejectRequest = async (req, res) => {
+export const updateLogisticRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
-    
-    await db.update(logisticRequests)
-      .set({ status: 'Rejected', rejectReason: reason || 'Ditolak oleh admin' })
-      .where(eq(logisticRequests.id, id));
-      
-    res.json({ message: 'Request rejected' });
+    const { status, rejectReason } = req.body;
+
+    req.tenantDb
+      .update(logisticRequests)
+      .set({ status, rejectReason })
+      .where(eq(logisticRequests.id, id))
+      .run();
+
+    res.json({ message: 'Status permintaan berhasil diperbarui' });
   } catch (error) {
     res.status(400).json({ error: error.message });
-  }
-};
-
-// 4. Peringatan Stok Kritis (Alerting)
-export const getLowStockAlerts = async (req, res) => {
-  try {
-    // SELECT * FROM warehouse_items WHERE qty <= minQty
-    // Karena Drizzle SQLite belum support query qty <= minQty secara langsung dalam satu tabel pakai helper simpel,
-    // kita akan fetch dan filter, atau pakai sql helper
-    // Untuk lebih safe cross-DB, filter di memori atau raw query:
-    const allItems = await db.select().from(warehouseItems);
-    const alerts = allItems.filter(item => item.qty <= item.minQty);
-    
-    res.json(alerts);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
 };

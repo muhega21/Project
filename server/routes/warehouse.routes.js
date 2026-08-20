@@ -1,35 +1,37 @@
-import express from 'express';
+import { Router } from 'express';
+import { tenantResolver, requirePermission } from '../middleware/tenant-resolver.js';
 import {
   getAssets,
   createAsset,
   updateAsset,
   deleteAsset,
-  stockIn,
-  stockOut,
-  getRequests,
-  approveRequest,
-  rejectRequest,
-  getLowStockAlerts
+  getLowStockItems,
+  getTransactions,
+  createTransaction,
+  getLogisticRequests,
+  createLogisticRequest,
+  updateLogisticRequestStatus,
 } from '../controllers/warehouse.controller.js';
 
-const router = express.Router();
+const router = Router();
 
-// 1. Data Master & Inventaris Gudang
-router.get('/assets', getAssets);
-router.post('/assets', createAsset);
-router.put('/assets/:id', updateAsset);
-router.delete('/assets/:id', deleteAsset);
+// Semua route warehouse butuh autentikasi & tenant yang valid
+router.use(tenantResolver);
 
-// 2. Manajemen Transaksi & Stok (In/Out)
-router.post('/stock-in', stockIn);
-router.post('/stock-out', stockOut);
+// --- Items ---
+router.get('/items', requirePermission('warehouse:view'), getAssets);
+router.post('/items', requirePermission('warehouse:edit'), createAsset);
+router.put('/items/:id', requirePermission('warehouse:edit'), updateAsset);
+router.delete('/items/:id', requirePermission('warehouse:delete'), deleteAsset);
+router.get('/items/low-stock', requirePermission('warehouse:view'), getLowStockItems);
 
-// 3. Integrasi & Notifikasi dari Permintaan Logistik
-router.get('/requests', getRequests);
-router.patch('/requests/:id/approve', approveRequest);
-router.patch('/requests/:id/reject', rejectRequest);
+// --- Transaksi ---
+router.get('/transactions', requirePermission('warehouse:view'), getTransactions);
+router.post('/transactions', requirePermission('warehouse:edit'), createTransaction);
 
-// 4. Peringatan Stok Kritis (Alerting)
-router.get('/alerts/low-stock', getLowStockAlerts);
+// --- Logistic Requests ---
+router.get('/logistic-requests', requirePermission('warehouse:view'), getLogisticRequests);
+router.post('/logistic-requests', requirePermission('warehouse:edit'), createLogisticRequest);
+router.patch('/logistic-requests/:id/status', requirePermission('warehouse:edit'), updateLogisticRequestStatus);
 
 export default router;

@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Multi-tenant
+.env
+tenants/
+main.db
+
+main.db-shm
+main.db-wal
+*.db-shm
+*.db-wal

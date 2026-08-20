@@ -204,7 +204,7 @@ function ListTask() {
             <thead className="bg-bg-dark text-text-secondary border-b border-border-color">
               <tr>
                 <th className="px-4 py-3 font-medium">No</th>
-                <th className="px-4 py-3 font-medium">ID Area</th>
+                <th className="px-4 py-3 font-medium">Kode Area/Lokasi (Plant)</th>
                 <th className="px-4 py-3 font-medium">Lokasi/Area</th>
                 <th className="px-4 py-3 font-medium">Nama Asset</th>
                 <th className="px-4 py-3 font-medium">Task Description</th>
@@ -225,7 +225,7 @@ function ListTask() {
                 return (
                   <tr key={plan.id} className={`hover:bg-btn-secondary/50 transition-colors ${overdue ? 'bg-red-500/5' : ''}`}>
                     <td className="px-4 py-3 text-text-secondary font-mono text-xs">{idx + 1}</td>
-                    <td className="px-4 py-3 text-text-secondary">{plan.areaId}</td>
+                    <td className="px-4 py-3 text-text-secondary">{plan.plantCode || plan.areaId || '-'}</td>
                     <td className="px-4 py-3 font-medium">{plan.areaName}</td>
                     <td className="px-4 py-3 font-medium text-blue-400">{plan.assetName}</td>
                     <td className="px-4 py-3 text-text-secondary max-w-[180px] truncate" title={plan.taskDescription}>{plan.taskDescription}</td>

@@ -20,6 +20,11 @@ function DetailEquipment() {
   const [filterArea, setFilterArea] = useState('Semua');
   const [filterStatus, setFilterStatus] = useState('Semua');
 
+  const [availablePlants, setAvailablePlants] = useState([]);
+  const [availableZones, setAvailableZones] = useState([]);
+  const [selectedFormPlant, setSelectedFormPlant] = useState('');
+  const [selectedFormZone, setSelectedFormZone] = useState('');
+
   const generateAssetId = () => {
     return 'EQU-' + Math.floor(Math.random() * 100000).toString().padStart(5, '0');
   };
@@ -47,7 +52,24 @@ function DetailEquipment() {
 
   useEffect(() => {
     loadAssets();
+    try {
+      const p = JSON.parse(localStorage.getItem('maintainx_plants')) || [];
+      setAvailablePlants(p);
+    } catch(e) {}
   }, []);
+
+  useEffect(() => {
+    if (selectedFormPlant) {
+      try {
+        const z = JSON.parse(localStorage.getItem('maintainx_zones_' + selectedFormPlant)) || [];
+        setAvailableZones(z);
+      } catch(e) {
+        setAvailableZones([]);
+      }
+    } else {
+      setAvailableZones([]);
+    }
+  }, [selectedFormPlant]);
 
   const handleAddEquipment = (e) => {
     e.preventDefault();
@@ -61,8 +83,8 @@ function DetailEquipment() {
       status: document.getElementById('form-eq-status').value,
       spec: document.getElementById('form-eq-spec').value,
       image: uploadedImage,
-      zoneId: editingAsset ? editingAsset.zoneId : (zoneId || ''),
-      plantCode: editingAsset ? editingAsset.plantCode : (plantCode || '')
+      zoneId: selectedFormZone,
+      plantCode: selectedFormPlant
     };
     
     const stored = JSON.parse(localStorage.getItem('maintainx_assets')) || [];
@@ -90,6 +112,8 @@ function DetailEquipment() {
     setNewAssetId(generateAssetId());
     setKondisiEquipment('Baik');
     setUploadedImage(null);
+    setSelectedFormPlant(plantCode || '');
+    setSelectedFormZone(zoneId || '');
     setIsAddModalOpen(true);
   };
 
@@ -98,6 +122,8 @@ function DetailEquipment() {
     setNewAssetId(asset.id);
     setKondisiEquipment(asset.kondisi || 'Baik');
     setUploadedImage(asset.image || null);
+    setSelectedFormPlant(asset.plantCode || '');
+    setSelectedFormZone(asset.zoneId || '');
     setIsAddModalOpen(true);
   };
 
@@ -533,6 +559,42 @@ function DetailEquipment() {
                         placeholder="Contoh: Boiler Component"
                         className="bg-input-bg border border-border-color text-white px-4 py-2.5 rounded-lg outline-none focus:border-blue-500 transition-colors"
                       />
+                    </div>
+                    
+                    {/* Plant Selection */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-medium text-gray-400">Area / Plant</label>
+                      <select 
+                        id="form-eq-plant" 
+                        value={selectedFormPlant}
+                        onChange={(e) => {
+                          setSelectedFormPlant(e.target.value);
+                          setSelectedFormZone('');
+                        }}
+                        className="bg-input-bg border border-border-color text-white px-4 py-2.5 rounded-lg outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                      >
+                        <option value="">-- Tidak Ada / Global --</option>
+                        {availablePlants.map(p => (
+                          <option key={p.code} value={p.code}>{p.name} ({p.code})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Zone Selection */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-medium text-gray-400">Section / Zone</label>
+                      <select 
+                        id="form-eq-zone" 
+                        value={selectedFormZone}
+                        onChange={(e) => setSelectedFormZone(e.target.value)}
+                        className="bg-input-bg border border-border-color text-white px-4 py-2.5 rounded-lg outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                        disabled={!selectedFormPlant}
+                      >
+                        <option value="">-- Tidak Ada --</option>
+                        {availableZones.map(z => (
+                          <option key={z.id} value={z.id}>{z.name || z.id}</option>
+                        ))}
+                      </select>
                     </div>
                     
                     {/* Lokasi/Ruangan */}

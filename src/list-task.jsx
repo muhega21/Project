@@ -1,7 +1,7 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { CheckCircle, Clock, AlertTriangle, Search, Upload, X, Camera, FileText } from "lucide-react";
-import { loadPlans, loadRecords, setStatus as storeSetStatus, getRecord, getElapsedDays, normalizePic } from "./maintenance-store.js";
+import { loadPlans, loadRecords, setStatus as storeSetStatus, getRecord, getElapsedDays, normalizePic, isScheduledOnDate } from "./maintenance-store.js";
 
 const STATUS_OPTIONS = ["All","On Progress","Open","Done","Waiting on Part"];
 const FREQ_COLORS = {
@@ -33,17 +33,6 @@ function isOverdue(nextDate, status) {
   return nextDate && new Date(nextDate) < new Date(new Date().toDateString());
 }
 
-function getDateCategory(startDate, nextDate) {
-  const today = new Date(new Date().toDateString());
-  const yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
-  const sd = new Date(startDate);
-  const nd = nextDate ? new Date(nextDate) : null;
-  if (sd.getTime()===today.getTime()||(nd&&nd.getTime()===today.getTime())) return "today";
-  if (sd.getTime()===yesterday.getTime()||(nd&&nd.getTime()===yesterday.getTime())) return "yesterday";
-  if (sd.getTime()===tomorrow.getTime()||(nd&&nd.getTime()===tomorrow.getTime())) return "tomorrow";
-  return "other";
-}
 
 /* ── Done Modal ─────────────────────────────────────────────────── */
 function DoneModal({ plan, onConfirm, onCancel }) {
@@ -261,11 +250,20 @@ function ListTask() {
 
   const filtered = plans.filter(plan => {
     const status = getTaskStatus(plan);
-    const nd = plan.nextDate;
     const matchStatus = statusFilter === "All" || status === statusFilter;
     const matchSearch = !searchQuery || plan.assetName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.areaName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.taskDescription.toLowerCase().includes(searchQuery.toLowerCase());
+    
     let matchTime = true;
-    if (timeFilter !== "all") matchTime = getDateCategory(plan.startDate, nd) === timeFilter;
+    if (timeFilter !== "all") {
+      const today = new Date();
+      const targetDate = new Date(today);
+      if (timeFilter === "yesterday") targetDate.setDate(today.getDate() - 1);
+      if (timeFilter === "tomorrow") targetDate.setDate(today.getDate() + 1);
+      
+      const targetDateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth()+1).padStart(2,"0")}-${String(targetDate.getDate()).padStart(2,"0")}`;
+      matchTime = isScheduledOnDate(plan.startDate, plan.frequency, targetDateStr);
+    }
+    
     return matchStatus && matchSearch && matchTime;
   });
 

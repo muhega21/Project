@@ -314,6 +314,9 @@ function SettingsPage() {
                       {[
                         { menu: 'Dashboard', accesses: [1, 1, 1, 1, 1, 1, 1], isSub: false },
                         { menu: 'Asset Register', accesses: [1, 1, 1, 0, 0, 0, 1], isSub: false },
+                        { menu: 'Data Asset', accesses: [1, 1, 1, 0, 0, 0, 1], isSub: true },
+                        { menu: 'Layout Area/Lokasi', accesses: [1, 1, 1, 0, 0, 0, 1], isSub: true },
+                        { menu: 'Detail Equipment', accesses: [1, 1, 1, 0, 0, 0, 1], isSub: true },
                         { menu: 'Warehouse & Sparepart', accesses: [1, 1, 1, 0, 1, 1, 0], isSub: false },
                         { menu: 'Dashboard Warehouse', accesses: [1, 1, 1, 0, 1, 1, 0], isSub: true },
                         { menu: 'Data Barang', accesses: [1, 1, 1, 0, 1, 1, 0], isSub: true },

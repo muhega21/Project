@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { Calendar, AlertTriangle, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, X, ChevronDown } from "lucide-react";
 import { loadPlans, savePlans, loadRecords, normalizePic } from "./maintenance-store.js";
@@ -220,23 +220,6 @@ function MaintenanceSchedule() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label:"Total Jadwal", value:plans.length, color:"text-blue-400", icon:<Calendar size={18}/> },
-          { label:"Overdue", value:plans.filter(p=>isOverdue(p.nextDate)).length, color:"text-red-400", icon:<AlertTriangle size={18}/> },
-          { label:"Jatuh Tempo 7 Hari", value:plans.filter(p=>isDueThisWeek(p.nextDate)).length, color:"text-orange-400", icon:<Clock size={18}/> },
-          { label:"Selesai (Done)", value:Object.values(records).filter(r=>r.status==="Done").length, color:"text-green-400", icon:<CheckCircle size={18}/> },
-        ].map((s,i) => (
-          <div key={i} className="bg-bg-surface border border-border-color rounded-xl p-4 flex items-center gap-3">
-            <div className={`${s.color} opacity-70`}>{s.icon}</div>
-            <div>
-              <div className="text-text-secondary text-xs">{s.label}</div>
-              <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-            </div>
-          </div>
-        ))}
-      </div>
 
       {/* Content */}
       {viewMode === "table" ? (

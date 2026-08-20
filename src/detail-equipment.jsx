@@ -752,24 +752,37 @@ function DetailEquipment() {
             </div>
             
             {/* Modal Footer */}
-            <div className="flex items-center justify-end px-6 py-4 border-t border-border-color bg-[#12161A] gap-3">
-              <button 
-                onClick={() => setViewingAsset(null)}
-                className="px-5 py-2.5 bg-btn-secondary hover:bg-gray-700 text-white rounded-lg border border-border-color transition-colors font-medium"
-              >
-                Tutup
-              </button>
+            <div className="flex items-center justify-between px-6 py-4 border-t border-border-color bg-[#12161A]">
               <button 
                 onClick={() => {
-                  const asset = viewingAsset;
+                  const id = viewingAsset.id;
                   setViewingAsset(null);
-                  openEditModal(asset);
+                  handleDeleteAsset(id);
                 }}
-                className="px-5 py-2.5 bg-accent hover:bg-blue-600 text-white rounded-lg flex items-center gap-2 transition-colors font-medium"
+                className="px-5 py-2.5 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white rounded-lg border border-red-600/30 hover:border-red-600 flex items-center gap-2 transition-all font-medium"
               >
-                <Settings size={18} />
-                Edit Equipment
+                <X size={18} />
+                Hapus
               </button>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setViewingAsset(null)}
+                  className="px-5 py-2.5 bg-btn-secondary hover:bg-gray-700 text-white rounded-lg border border-border-color transition-colors font-medium"
+                >
+                  Tutup
+                </button>
+                <button 
+                  onClick={() => {
+                    const asset = viewingAsset;
+                    setViewingAsset(null);
+                    openEditModal(asset);
+                  }}
+                  className="px-5 py-2.5 bg-accent hover:bg-blue-600 text-white rounded-lg flex items-center gap-2 transition-colors font-medium"
+                >
+                  <Settings size={18} />
+                  Edit Equipment
+                </button>
+              </div>
             </div>
           </div>
         </div>

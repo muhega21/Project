@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { Calendar, AlertTriangle, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, X, ChevronDown } from "lucide-react";
+import { Calendar, AlertTriangle, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, X, ChevronDown, Plus, HelpCircle, Trash2 } from "lucide-react";
 import { loadPlans, savePlans, loadRecords, normalizePic } from "./maintenance-store.js";
 
 const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -35,13 +35,13 @@ function computeNextDate(startDate, frequency) {
 
 /* ── PicTagInput ───────────────────────────────────────────────── */
 function PicTagInput({ value, onChange, workers }) {
-  const [open, setOpen] = useState(false);
+  const [popoverMode, setPopoverMode] = useState(null); // 'add', 'view', or null
   const [query, setQuery] = useState("");
   const ref = useRef(null);
   const selected = normalizePic(value);
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setPopoverMode(null); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
@@ -52,22 +52,27 @@ function PicTagInput({ value, onChange, workers }) {
   const remove = (name) => onChange(selected.filter(n => n !== name));
 
   return (
-    <div ref={ref} className="relative min-w-[200px]">
-      <div
-        onClick={() => setOpen(o => !o)}
-        className="flex flex-wrap gap-1 bg-bg-dark border border-border-color rounded-lg px-2 py-1.5 cursor-pointer hover:border-[#FF7043] transition-colors min-h-[34px]"
+    <div ref={ref} className="relative flex items-center gap-2">
+      <span className="font-bold text-sm bg-bg-dark border border-border-color px-2.5 py-1 rounded-lg text-text-primary min-w-[32px] text-center" title="Jumlah PIC bertugas">
+        {selected.length}
+      </span>
+      <button 
+        onClick={() => { setPopoverMode(m => m === 'add' ? null : 'add'); setQuery(""); }} 
+        className={`p-1.5 border rounded-full transition-colors ${popoverMode === 'add' ? 'bg-[#FF7043] border-[#FF7043] text-white' : 'bg-btn-secondary hover:bg-bg-dark border-transparent hover:border-[#FF7043] text-text-primary'}`}
+        title="Tambah PIC"
       >
-        {selected.length === 0 && <span className="text-text-secondary text-xs self-center">— Pilih PIC —</span>}
-        {selected.map(name => (
-          <span key={name} className="flex items-center gap-1 bg-[#FF7043]/20 text-[#FF7043] border border-[#FF7043]/30 rounded px-1.5 py-0.5 text-xs font-medium">
-            {name}
-            <button onClick={(e) => { e.stopPropagation(); remove(name); }} className="hover:text-white"><X size={10}/></button>
-          </span>
-        ))}
-        <ChevronDown size={12} className="ml-auto self-center text-text-secondary shrink-0"/>
-      </div>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 bg-bg-surface border border-border-color rounded-xl shadow-2xl w-56 max-h-52 overflow-y-auto">
+        <Plus size={14}/>
+      </button>
+      <button 
+        onClick={() => setPopoverMode(m => m === 'view' ? null : 'view')} 
+        className={`p-1.5 border rounded-full transition-colors ${popoverMode === 'view' ? 'bg-blue-500 border-blue-500 text-white' : 'bg-btn-secondary hover:bg-bg-dark border-transparent hover:border-blue-400 text-text-primary'}`}
+        title="Lihat PIC bertugas"
+      >
+        <HelpCircle size={14}/>
+      </button>
+
+      {popoverMode === 'add' && (
+        <div className="absolute top-full left-0 mt-2 z-50 bg-bg-surface border border-border-color rounded-xl shadow-2xl w-56 max-h-52 overflow-y-auto">
           <div className="p-2 sticky top-0 bg-bg-surface border-b border-border-color">
             <input
               autoFocus
@@ -86,6 +91,26 @@ function PicTagInput({ value, onChange, workers }) {
               </button>
             ))
           }
+        </div>
+      )}
+
+      {popoverMode === 'view' && (
+        <div className="absolute top-full left-0 mt-2 z-50 bg-bg-surface border border-border-color rounded-xl shadow-2xl w-56 max-h-52 overflow-y-auto p-2">
+          <div className="text-xs font-semibold text-text-secondary mb-2 px-1">Daftar PIC Bertugas:</div>
+          {selected.length === 0 ? (
+            <div className="px-3 py-3 text-xs text-text-secondary text-center">Belum ada PIC yang ditugaskan</div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {selected.map(name => (
+                <div key={name} className="flex items-center justify-between bg-bg-dark rounded px-2 py-1.5 border border-border-color">
+                  <span className="text-xs text-text-primary font-medium truncate pr-2">{name}</span>
+                  <button onClick={() => remove(name)} className="text-red-400 hover:text-white p-1 rounded hover:bg-red-500 transition-colors shrink-0" title="Hapus PIC">
+                    <Trash2 size={12}/>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

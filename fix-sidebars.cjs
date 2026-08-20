@@ -16,6 +16,7 @@ const standardSidebar = `
             <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </div>
           <div class="nav-submenu">
+            <a href="/asset-register.html" class="nav-item" style="height:36px;font-size:0.85rem">Data Asset</a>
             <a href="/layout-area.html" class="nav-item" style="height:36px;font-size:0.85rem">Layout Area/Lokasi</a>
             <a href="/detail-equipment.html" class="nav-item" style="height:36px;font-size:0.85rem">Detail Equipment</a>
           </div>
@@ -64,7 +65,7 @@ const standardSidebar = `
         </a>
 `;
 
-const assetPages = ['layout-area.html', 'detail-equipment.html'];
+const assetPages = ['asset-register.html', 'data-asset.html', 'layout-area.html', 'detail-equipment.html'];
 const warehousePages = ['warehouse.html', 'data-barang.html', 'data-gudang.html', 'transaksi-gudang.html', 'perkakas.html', 'data-alat.html', 'logistic-request.html'];
 const maintenancePages = ['maintenance-planning.html', 'maintenance-schedule.html', 'list-task.html', 'report-task-list.html', 'work-order.html'];
 

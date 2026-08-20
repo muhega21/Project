@@ -690,12 +690,23 @@ function DetailEquipment() {
             </div>
             
             {/* Modal Footer */}
-            <div className="flex items-center justify-end px-6 py-4 border-t border-border-color bg-[#12161A]">
+            <div className="flex items-center justify-end px-6 py-4 border-t border-border-color bg-[#12161A] gap-3">
               <button 
                 onClick={() => setViewingAsset(null)}
                 className="px-5 py-2.5 bg-btn-secondary hover:bg-gray-700 text-white rounded-lg border border-border-color transition-colors font-medium"
               >
                 Tutup
+              </button>
+              <button 
+                onClick={() => {
+                  const asset = viewingAsset;
+                  setViewingAsset(null);
+                  openEditModal(asset);
+                }}
+                className="px-5 py-2.5 bg-accent hover:bg-blue-600 text-white rounded-lg flex items-center gap-2 transition-colors font-medium"
+              >
+                <Settings size={18} />
+                Edit Equipment
               </button>
             </div>
           </div>

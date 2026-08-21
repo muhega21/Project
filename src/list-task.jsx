@@ -28,9 +28,9 @@ function computeNextDate(startDate, frequency) {
   return d.toISOString().split("T")[0];
 }
 
-function isOverdue(nextDate, status) {
+function isOverdue(targetDateStr, status) {
   if (status === "Done") return false;
-  return nextDate && new Date(nextDate) < new Date(new Date().toDateString());
+  return targetDateStr && new Date(targetDateStr) < new Date(new Date().toDateString());
 }
 
 
@@ -265,8 +265,14 @@ function ListTask() {
   const filtered = plans.filter(plan => {
     const targetDateStr = getTargetDateStr();
     const status = getTaskStatus(plan.id, targetDateStr);
-    if (status === "Done") return false;
-    const matchStatus = statusFilter === "All" || status === statusFilter;
+    
+    // Sembunyikan "Done" kecuali sedang difilter khusus "Done"
+    if (status === "Done" && statusFilter !== "Done") return false;
+    
+    const isTaskOverdue = isOverdue(targetDateStr, status);
+    if (statusFilter === "Overdue" && !isTaskOverdue) return false;
+    
+    const matchStatus = statusFilter === "All" || statusFilter === "Overdue" || status === statusFilter;
     const matchSearch = !searchQuery || plan.assetName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.areaName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.taskDescription.toLowerCase().includes(searchQuery.toLowerCase());
     
     let matchTime = isScheduledOnDate(plan.startDate, plan.frequency, targetDateStr);
@@ -277,7 +283,7 @@ function ListTask() {
   const getStatusBadge = (plan) => {
     const targetDateStr = getTargetDateStr();
     const status = getTaskStatus(plan.id, targetDateStr);
-    const overdue = isOverdue(plan.nextDate, status);
+    const overdue = isOverdue(targetDateStr, status);
     const map = {
       "Done": <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs border border-green-500/40 flex items-center gap-1 w-fit"><CheckCircle size={11}/> Done</span>,
       "On Progress": <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs border border-blue-500/40 flex items-center gap-1 w-fit"><Clock size={11}/> On Progress</span>,
@@ -291,13 +297,21 @@ function ListTask() {
     const targetDateStr = getTargetDateStr();
     const key = `${plan.id}_${targetDateStr}`;
     const rec = records[key];
-    if (!rec || !rec.startedAt) return <span className="text-gray-600 text-xs">—</span>;
-    const days = getElapsedDays(rec);
-    const color = days === null ? "text-gray-500" : days <= 1 ? "text-green-400" : days <= 3 ? "text-yellow-400" : "text-red-400";
+    
+    const startDate = (rec && rec.startedAt) ? new Date(rec.startedAt) : new Date(targetDateStr);
+    const endDate = (rec && rec.doneAt) ? new Date(rec.doneAt) : new Date();
+    
+    startDate.setHours(0,0,0,0);
+    endDate.setHours(0,0,0,0);
+    
+    const days = Math.floor((endDate - startDate) / 86400000);
+    const displayDays = Math.max(0, days);
+    const color = displayDays <= 1 ? "text-green-400" : displayDays <= 3 ? "text-yellow-400" : "text-red-400";
+    
     return (
-      <div className={`text-xs font-semibold ${color}`}>
-        {days !== null ? `${days} hari` : "—"}
-        {rec.status !== "Done" && rec.startedAt && <span className="block text-[10px] font-normal text-gray-500">{new Date(rec.startedAt).toLocaleDateString("id-ID")}</span>}
+      <div>
+        <span className={`text-sm font-bold ${color}`}>{displayDays} hari</span>
+        {rec && rec.status !== "Done" && rec.startedAt && <span className="block text-[10px] font-normal text-gray-500">{new Date(rec.startedAt).toLocaleDateString("id-ID")}</span>}
       </div>
     );
   };
@@ -308,7 +322,7 @@ function ListTask() {
     onProgress: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "On Progress").length,
     done: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Done").length,
     waiting: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Waiting on Part").length,
-    overdue: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && isOverdue(p.nextDate, getTaskStatus(p.id, getTargetDateStr()))).length,
+    overdue: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && isOverdue(getTargetDateStr(), getTaskStatus(p.id, getTargetDateStr()))).length,
   };
 
   const timeTabs = [["yesterday","Kemarin"],["today","Hari Ini"],["tomorrow","Besok"]];
@@ -324,31 +338,26 @@ function ListTask() {
       {/* Stats */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         {[
-          { label:"Total", value:statCounts.all, color:"text-text-primary" },
-          { label:"Open", value:statCounts.open, color:"text-text-secondary" },
-          { label:"On Progress", value:statCounts.onProgress, color:"text-blue-400" },
-          { label:"Done", value:statCounts.done, color:"text-green-400" },
-          { label:"Waiting Part", value:statCounts.waiting, color:"text-yellow-400" },
-          { label:"Overdue", value:statCounts.overdue, color:"text-red-400" },
+          { label:"Total", filter:"All", value:statCounts.all, color:"text-text-primary" },
+          { label:"Open", filter:"Open", value:statCounts.open, color:"text-text-secondary" },
+          { label:"On Progress", filter:"On Progress", value:statCounts.onProgress, color:"text-blue-400" },
+          { label:"Done", filter:"Done", value:statCounts.done, color:"text-green-400" },
+          { label:"Waiting Part", filter:"Waiting on Part", value:statCounts.waiting, color:"text-yellow-400" },
+          { label:"Overdue", filter:"Overdue", value:statCounts.overdue, color:"text-red-400" },
         ].map((s,i) => (
-          <div key={i} className="bg-bg-surface border border-border-color rounded-xl p-3 text-center">
+          <div key={i} onClick={() => setStatusFilter(s.filter)} className={`cursor-pointer bg-bg-surface border rounded-xl p-3 text-center transition-colors hover:border-[#FF7043] ${statusFilter === s.filter ? "border-[#FF7043] ring-1 ring-[#FF7043]" : "border-border-color"}`}>
             <div className="text-text-secondary text-xs mb-1">{s.label}</div>
             <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Time & Status Tabs */}
+      {/* Time Tabs */}
       <div className="flex flex-wrap items-center gap-2 bg-bg-surface border border-border-color rounded-xl px-4 py-2">
         <Clock size={16} className="text-text-secondary"/>
         <div className="flex gap-1">
           {timeTabs.map(([k,l]) => (
             <button key={k} onClick={() => setTimeFilter(k)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${timeFilter===k?"bg-[#FF7043] text-white":"text-text-secondary hover:bg-btn-secondary"}`}>{l}</button>
-          ))}
-        </div>
-        <div className="ml-auto flex flex-wrap gap-1">
-          {STATUS_OPTIONS.map(s => (
-            <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${statusFilter===s?"bg-bg-dark border border-[#FF7043] text-[#FF7043]":"text-text-secondary hover:bg-btn-secondary"}`}>{s}</button>
           ))}
         </div>
       </div>
@@ -377,7 +386,7 @@ function ListTask() {
               ) : filtered.map((plan, idx) => {
                 const targetDateStr = getTargetDateStr();
                 const status = getTaskStatus(plan.id, targetDateStr);
-                const overdue = isOverdue(plan.nextDate, status);
+                const overdue = isOverdue(targetDateStr, status);
                 const key = `${plan.id}_${targetDateStr}`;
                 const pic = records[key]?.pic !== undefined && records[key]?.pic !== null ? records[key].pic : plan.pic;
                 const pics = normalizePic(pic);
@@ -398,16 +407,17 @@ function ListTask() {
                     <td className="px-4 py-3">{getStatusBadge(plan)}</td>
                     <td className="px-4 py-3">{getElapsedBadge(plan)}</td>
                     <td className="px-4 py-3">
-                      <select
-                        value={status}
-                        onChange={e => handleStatusChange(plan, e.target.value)}
-                        className="bg-bg-dark border border-border-color rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#FF7043] appearance-none"
-                      >
-                        <option value="Open">Open</option>
-                        <option value="On Progress">On Progress</option>
-                        <option value="Waiting on Part">Waiting on Part</option>
-                        <option value="Done">Done</option>
-                      </select>
+                      {status !== "Done" ? (
+                        <select
+                          value={status}
+                          onChange={(e) => handleStatusChange(plan, e.target.value)}
+                          className="bg-bg-dark border border-border-color rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#FF7043]"
+                        >
+                          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      ) : (
+                        <span className="text-gray-500 text-xs italic">Read-only (Selesai)</span>
+                      )}
                     </td>
                   </tr>
                 );

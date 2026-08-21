@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { Calendar, AlertTriangle, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, X, ChevronDown, Plus, HelpCircle, Trash2 } from "lucide-react";
+import { Calendar, AlertTriangle, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, X, ChevronDown, Plus, HelpCircle, Trash2, ClipboardList } from "lucide-react";
 import { loadPlans, savePlans, loadRecords, normalizePic, updateRecord } from "./maintenance-store.js";
 
 const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -201,7 +201,7 @@ function MaintenanceSchedule() {
     }
   };
 
-  const isOverdue = (nd) => nd && new Date(nd) < new Date();
+  const isOverdue = (nd, ts) => nd && new Date(nd) < new Date(new Date().toDateString()) && ts !== "Done";
   const isDueThisWeek = (nd) => { if (!nd) return false; const n=new Date(nd),t=new Date(),w=new Date(); w.setDate(t.getDate()+7); return n>=t&&n<=w; };
 
   const filtered = plans.filter(p => {
@@ -263,6 +263,9 @@ function MaintenanceSchedule() {
             <button onClick={() => setViewMode("table")} className={`px-3 py-2 text-sm transition-colors ${viewMode==="table"?"bg-[#FF7043] text-white":"bg-bg-dark text-text-secondary hover:bg-btn-secondary"}`}>Tabel</button>
             <button onClick={() => setViewMode("calendar")} className={`px-3 py-2 text-sm transition-colors ${viewMode==="calendar"?"bg-[#FF7043] text-white":"bg-bg-dark text-text-secondary hover:bg-btn-secondary"}`}>Kalender</button>
           </div>
+          <button onClick={() => window.location.href='/list-task.html'} className="ml-auto flex items-center gap-2 px-3 py-2 text-sm transition-colors bg-[#FF7043] text-white rounded-lg hover:bg-orange-600 shrink-0 shadow">
+            <ClipboardList size={16}/> Task Belum Selesai
+          </button>
         </div>
       </div>
 
@@ -289,10 +292,10 @@ function MaintenanceSchedule() {
                 ) : filtered.map(plan => {
                   const targetDateStr = getTargetDateStr();
                   const ts = getTaskStatus(plan.id, targetDateStr);
-                  const overdue = isOverdue(plan.nextDate);
+                  const overdue = isOverdue(targetDateStr, ts);
                   const pic = getTaskPic(plan, targetDateStr);
                   return (
-                    <tr key={plan.id} className={`hover:bg-btn-secondary/50 transition-colors ${overdue && ts !== "Done" ? "bg-red-500/5" : ""}`}>
+                    <tr key={plan.id} className={`hover:bg-btn-secondary/50 transition-colors ${overdue ? "bg-red-500/5" : ""}`}>
                       <td className="px-4 py-3 text-text-secondary font-mono text-xs">{plan.plantCode || plan.areaId || "-"}</td>
                       <td className="px-4 py-3 font-medium">{plan.areaName}</td>
                       <td className="px-4 py-3 font-medium text-blue-400">{plan.assetName}</td>

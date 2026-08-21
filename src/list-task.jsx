@@ -224,6 +224,7 @@ function ListTask() {
   }, []);
 
   const getTargetDateStr = () => {
+    if (timeFilter === "all") return "";
     const today = new Date();
     const targetDate = new Date(today);
     if (timeFilter === "yesterday") targetDate.setDate(today.getDate() - 1);
@@ -275,7 +276,7 @@ function ListTask() {
     const matchStatus = statusFilter === "All" || statusFilter === "Overdue" || status === statusFilter;
     const matchSearch = !searchQuery || plan.assetName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.areaName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.taskDescription.toLowerCase().includes(searchQuery.toLowerCase());
     
-    let matchTime = isScheduledOnDate(plan.startDate, plan.frequency, targetDateStr);
+    let matchTime = timeFilter === "all" ? true : isScheduledOnDate(plan.startDate, plan.frequency, targetDateStr);
     
     return matchStatus && matchSearch && matchTime;
   });
@@ -317,15 +318,15 @@ function ListTask() {
   };
 
   const statCounts = {
-    all: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())).length,
-    open: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Open").length,
-    onProgress: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "On Progress").length,
-    done: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Done").length,
-    waiting: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Waiting on Part").length,
-    overdue: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && isOverdue(getTargetDateStr(), getTaskStatus(p.id, getTargetDateStr()))).length,
+    all: plans.filter(p => timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())).length,
+    open: plans.filter(p => (timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())) && getTaskStatus(p.id, getTargetDateStr()) === "Open").length,
+    onProgress: plans.filter(p => (timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())) && getTaskStatus(p.id, getTargetDateStr()) === "On Progress").length,
+    done: plans.filter(p => (timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())) && getTaskStatus(p.id, getTargetDateStr()) === "Done").length,
+    waiting: plans.filter(p => (timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())) && getTaskStatus(p.id, getTargetDateStr()) === "Waiting on Part").length,
+    overdue: plans.filter(p => (timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())) && isOverdue(getTargetDateStr(), getTaskStatus(p.id, getTargetDateStr()))).length,
   };
 
-  const timeTabs = [["yesterday","Kemarin"],["today","Hari Ini"],["tomorrow","Besok"]];
+  const timeTabs = [["all", "Semua"], ["yesterday","Kemarin"],["today","Hari Ini"],["tomorrow","Besok"]];
 
   return (
     <div className="flex flex-col h-full gap-4 text-text-primary font-sans">
@@ -407,7 +408,9 @@ function ListTask() {
                     <td className="px-4 py-3">{getStatusBadge(plan)}</td>
                     <td className="px-4 py-3">{getElapsedBadge(plan)}</td>
                     <td className="px-4 py-3">
-                      {status !== "Done" ? (
+                      {timeFilter === "all" ? (
+                        <span className="text-gray-500 text-xs italic">Pilih tanggal untuk update</span>
+                      ) : status !== "Done" ? (
                         <select
                           value={status}
                           onChange={(e) => handleStatusChange(plan, e.target.value)}

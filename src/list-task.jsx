@@ -413,7 +413,10 @@ function ListTask() {
                           onChange={(e) => handleStatusChange(plan, e.target.value)}
                           className="bg-bg-dark border border-border-color rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#FF7043]"
                         >
-                          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                          <option value="Open">Open</option>
+                          <option value="On Progress">On Progress</option>
+                          <option value="Waiting on Part">Waiting on Part</option>
+                          <option value="Done">Done</option>
                         </select>
                       ) : (
                         <span className="text-gray-500 text-xs italic">Read-only (Selesai)</span>

@@ -224,7 +224,6 @@ function ListTask() {
   }, []);
 
   const getTargetDateStr = () => {
-    if (timeFilter === "all") return "";
     const today = new Date();
     const targetDate = new Date(today);
     if (timeFilter === "yesterday") targetDate.setDate(today.getDate() - 1);
@@ -276,7 +275,7 @@ function ListTask() {
     const matchStatus = statusFilter === "All" || statusFilter === "Overdue" || status === statusFilter;
     const matchSearch = !searchQuery || plan.assetName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.areaName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.taskDescription.toLowerCase().includes(searchQuery.toLowerCase());
     
-    let matchTime = timeFilter === "all" ? true : isScheduledOnDate(plan.startDate, plan.frequency, targetDateStr);
+    let matchTime = isScheduledOnDate(plan.startDate, plan.frequency, targetDateStr);
     
     return matchStatus && matchSearch && matchTime;
   });
@@ -318,12 +317,12 @@ function ListTask() {
   };
 
   const statCounts = {
-    all: plans.filter(p => timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())).length,
-    open: plans.filter(p => (timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())) && getTaskStatus(p.id, getTargetDateStr()) === "Open").length,
-    onProgress: plans.filter(p => (timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())) && getTaskStatus(p.id, getTargetDateStr()) === "On Progress").length,
-    done: plans.filter(p => (timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())) && getTaskStatus(p.id, getTargetDateStr()) === "Done").length,
-    waiting: plans.filter(p => (timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())) && getTaskStatus(p.id, getTargetDateStr()) === "Waiting on Part").length,
-    overdue: plans.filter(p => (timeFilter === "all" ? true : isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())) && isOverdue(getTargetDateStr(), getTaskStatus(p.id, getTargetDateStr()))).length,
+    all: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())).length,
+    open: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Open").length,
+    onProgress: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "On Progress").length,
+    done: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Done").length,
+    waiting: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Waiting on Part").length,
+    overdue: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && isOverdue(getTargetDateStr(), getTaskStatus(p.id, getTargetDateStr()))).length,
   };
 
   const timeTabs = [["all", "Semua"], ["yesterday","Kemarin"],["today","Hari Ini"],["tomorrow","Besok"]];
@@ -358,7 +357,10 @@ function ListTask() {
         <Clock size={16} className="text-text-secondary"/>
         <div className="flex gap-1">
           {timeTabs.map(([k,l]) => (
-            <button key={k} onClick={() => setTimeFilter(k)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${timeFilter===k?"bg-[#FF7043] text-white":"text-text-secondary hover:bg-btn-secondary"}`}>{l}</button>
+            <button key={k} onClick={() => {
+              if (k === "all") window.location.href = '/maintenance-schedule.html';
+              else setTimeFilter(k);
+            }} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${timeFilter===k?"bg-[#FF7043] text-white":"text-text-secondary hover:bg-btn-secondary"}`}>{l}</button>
           ))}
         </div>
       </div>
@@ -408,9 +410,7 @@ function ListTask() {
                     <td className="px-4 py-3">{getStatusBadge(plan)}</td>
                     <td className="px-4 py-3">{getElapsedBadge(plan)}</td>
                     <td className="px-4 py-3">
-                      {timeFilter === "all" ? (
-                        <span className="text-gray-500 text-xs italic">Pilih tanggal untuk update</span>
-                      ) : status !== "Done" ? (
+                      {status !== "Done" ? (
                         <select
                           value={status}
                           onChange={(e) => handleStatusChange(plan, e.target.value)}

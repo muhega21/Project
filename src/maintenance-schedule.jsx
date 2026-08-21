@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { Calendar, AlertTriangle, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, X, ChevronDown, Plus, HelpCircle, Trash2 } from "lucide-react";
-import { loadPlans, savePlans, loadRecords, normalizePic } from "./maintenance-store.js";
+import { loadPlans, savePlans, loadRecords, normalizePic, updateRecord } from "./maintenance-store.js";
 
 const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 const FREQ_COLORS = {
@@ -152,18 +152,35 @@ function MaintenanceSchedule() {
 
   useEffect(() => { reload(); }, []);
 
-  const updatePic = (planId, picArray) => {
-    const updated = plans.map(p => p.id === planId ? { ...p, pic: picArray } : p);
-    setPlans(updated);
-    savePlans(updated);
-  };
-
-  const getTaskStatus = (planId) => (records[planId]?.status) || "Open";
-
   const today = new Date();
   const yesterday = new Date(today); yesterday.setDate(yesterday.getDate()-1);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
   const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
+  const getTargetDateStr = () => {
+    if (timeToggle === "Today") return fmt(today);
+    if (timeToggle === "Yesterday") return fmt(yesterday);
+    if (timeToggle === "Tomorrow") return fmt(tomorrow);
+    if (timeToggle === "Custom" && customDateFilter) return customDateFilter;
+    return fmt(today);
+  };
+
+  const getTaskStatus = (planId, dateStr) => {
+    const key = `${planId}_${dateStr}`;
+    return records[key]?.status || "Open";
+  };
+
+  const getTaskPic = (plan, dateStr) => {
+    const key = `${plan.id}_${dateStr}`;
+    const recPic = records[key]?.pic;
+    return recPic !== undefined && recPic !== null ? recPic : plan.pic;
+  };
+
+  const updatePic = (planId, picArray) => {
+    const dateStr = getTargetDateStr();
+    updateRecord(planId, dateStr, { pic: picArray });
+    setRecords(loadRecords());
+  };
 
   const isScheduledOnDate = (startDateStr, frequency, targetDateStr) => {
     if (!startDateStr || !targetDateStr) return false;
@@ -270,8 +287,10 @@ function MaintenanceSchedule() {
                 {filtered.length === 0 ? (
                   <tr><td colSpan="7" className="px-6 py-12 text-center text-text-secondary">Tidak ada jadwal yang ditemukan.</td></tr>
                 ) : filtered.map(plan => {
-                  const ts = getTaskStatus(plan.id);
+                  const targetDateStr = getTargetDateStr();
+                  const ts = getTaskStatus(plan.id, targetDateStr);
                   const overdue = isOverdue(plan.nextDate);
+                  const pic = getTaskPic(plan, targetDateStr);
                   return (
                     <tr key={plan.id} className={`hover:bg-btn-secondary/50 transition-colors ${overdue && ts !== "Done" ? "bg-red-500/5" : ""}`}>
                       <td className="px-4 py-3 text-text-secondary font-mono text-xs">{plan.plantCode || plan.areaId || "-"}</td>
@@ -280,7 +299,7 @@ function MaintenanceSchedule() {
                       <td className="px-4 py-3 text-text-secondary max-w-[200px]" style={{whiteSpace:"normal"}}>{plan.taskDescription}</td>
                       <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-xs font-semibold ${FREQ_COLORS[plan.frequency]||"bg-gray-500/20 text-gray-400"}`}>{plan.frequency}</span></td>
                       <td className="px-4 py-3">
-                        <PicTagInput value={plan.pic} onChange={(v) => updatePic(plan.id, v)} workers={workers} disabled={ts === "Done"}/>
+                        <PicTagInput value={pic} onChange={(v) => updatePic(plan.id, v)} workers={workers} disabled={ts === "Done"}/>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${TASK_STATUS_COLORS[ts]||TASK_STATUS_COLORS["Open"]}`}>{ts}</span>

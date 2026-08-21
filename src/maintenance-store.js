@@ -24,27 +24,30 @@ export function saveRecords(records) {
   try { localStorage.setItem(TASK_RECORDS_KEY, JSON.stringify(records)); } catch(e) {}
 }
 
-export function getRecord(planId) {
+export function getRecord(planId, dateStr) {
   const records = loadRecords();
-  return records[planId] || {
+  const key = dateStr ? `${planId}_${dateStr}` : planId;
+  return records[key] || {
     status: "Open",
     startedAt: null,
     doneAt: null,
     waitingReason: null,
     evidencePhotos: [],
     archivedAt: null,
+    pic: null, // null means use default plan.pic
   };
 }
 
-export function updateRecord(planId, patch) {
+export function updateRecord(planId, dateStr, patch) {
   const records = loadRecords();
-  records[planId] = { ...getRecord(planId), ...patch };
+  const key = dateStr ? `${planId}_${dateStr}` : planId;
+  records[key] = { ...getRecord(planId, dateStr), ...patch };
   saveRecords(records);
-  return records[planId];
+  return records[key];
 }
 
-export function setStatus(planId, newStatus, extraData) {
-  const current = getRecord(planId);
+export function setStatus(planId, dateStr, newStatus, extraData) {
+  const current = getRecord(planId, dateStr);
   const patch = Object.assign({ status: newStatus }, extraData || {});
   if (newStatus === "On Progress" && !current.startedAt) {
     patch.startedAt = new Date().toISOString();
@@ -53,7 +56,7 @@ export function setStatus(planId, newStatus, extraData) {
     patch.doneAt = new Date().toISOString();
     patch.archivedAt = new Date().toISOString();
   }
-  return updateRecord(planId, patch);
+  return updateRecord(planId, dateStr, patch);
 }
 
 export function getElapsedDays(record) {

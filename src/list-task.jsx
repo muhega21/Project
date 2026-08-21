@@ -223,53 +223,60 @@ function ListTask() {
     return () => clearInterval(interval);
   }, []);
 
-  const getTaskStatus = (plan) => records[plan.id]?.status || "Open";
+  const getTargetDateStr = () => {
+    const today = new Date();
+    const targetDate = new Date(today);
+    if (timeFilter === "yesterday") targetDate.setDate(today.getDate() - 1);
+    if (timeFilter === "tomorrow") targetDate.setDate(today.getDate() + 1);
+    return `${targetDate.getFullYear()}-${String(targetDate.getMonth()+1).padStart(2,"0")}-${String(targetDate.getDate()).padStart(2,"0")}`;
+  };
+
+  const getTaskStatus = (planId, targetDateStr) => {
+    const key = `${planId}_${targetDateStr}`;
+    return records[key]?.status || "Open";
+  };
 
   // Smart status handler
   const handleStatusChange = (plan, newStatus) => {
-    const current = getTaskStatus(plan);
+    const targetDateStr = getTargetDateStr();
+    const current = getTaskStatus(plan.id, targetDateStr);
     if (newStatus === current) return;
     if (newStatus === "Done") { setDoneModal(plan); return; }
     if (newStatus === "Waiting on Part") { setWaitingModal(plan); return; }
     // On Progress or Open — direct
-    storeSetStatus(plan.id, newStatus);
+    storeSetStatus(plan.id, targetDateStr, newStatus);
     setRecords(loadRecords());
   };
 
   const confirmDone = (plan, photos) => {
-    storeSetStatus(plan.id, "Done", { evidencePhotos: photos });
+    const targetDateStr = getTargetDateStr();
+    storeSetStatus(plan.id, targetDateStr, "Done", { evidencePhotos: photos });
     setDoneModal(null);
     setRecords(loadRecords());
   };
 
   const confirmWaiting = (plan, reason) => {
-    storeSetStatus(plan.id, "Waiting on Part", { waitingReason: reason });
+    const targetDateStr = getTargetDateStr();
+    storeSetStatus(plan.id, targetDateStr, "Waiting on Part", { waitingReason: reason });
     setWaitingModal(null);
     setRecords(loadRecords());
   };
 
   const filtered = plans.filter(plan => {
-    const status = getTaskStatus(plan);
+    const targetDateStr = getTargetDateStr();
+    const status = getTaskStatus(plan.id, targetDateStr);
     if (status === "Done") return false;
     const matchStatus = statusFilter === "All" || status === statusFilter;
     const matchSearch = !searchQuery || plan.assetName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.areaName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.taskDescription.toLowerCase().includes(searchQuery.toLowerCase());
     
-    let matchTime = true;
-    if (timeFilter !== "all") {
-      const today = new Date();
-      const targetDate = new Date(today);
-      if (timeFilter === "yesterday") targetDate.setDate(today.getDate() - 1);
-      if (timeFilter === "tomorrow") targetDate.setDate(today.getDate() + 1);
-      
-      const targetDateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth()+1).padStart(2,"0")}-${String(targetDate.getDate()).padStart(2,"0")}`;
-      matchTime = isScheduledOnDate(plan.startDate, plan.frequency, targetDateStr);
-    }
+    let matchTime = isScheduledOnDate(plan.startDate, plan.frequency, targetDateStr);
     
     return matchStatus && matchSearch && matchTime;
   });
 
   const getStatusBadge = (plan) => {
-    const status = getTaskStatus(plan);
+    const targetDateStr = getTargetDateStr();
+    const status = getTaskStatus(plan.id, targetDateStr);
     const overdue = isOverdue(plan.nextDate, status);
     const map = {
       "Done": <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs border border-green-500/40 flex items-center gap-1 w-fit"><CheckCircle size={11}/> Done</span>,
@@ -281,7 +288,9 @@ function ListTask() {
   };
 
   const getElapsedBadge = (plan) => {
-    const rec = records[plan.id];
+    const targetDateStr = getTargetDateStr();
+    const key = `${plan.id}_${targetDateStr}`;
+    const rec = records[key];
     if (!rec || !rec.startedAt) return <span className="text-gray-600 text-xs">—</span>;
     const days = getElapsedDays(rec);
     const color = days === null ? "text-gray-500" : days <= 1 ? "text-green-400" : days <= 3 ? "text-yellow-400" : "text-red-400";
@@ -294,12 +303,12 @@ function ListTask() {
   };
 
   const statCounts = {
-    all: plans.length,
-    open: plans.filter(p => getTaskStatus(p) === "Open").length,
-    onProgress: plans.filter(p => getTaskStatus(p) === "On Progress").length,
-    done: plans.filter(p => getTaskStatus(p) === "Done").length,
-    waiting: plans.filter(p => getTaskStatus(p) === "Waiting on Part").length,
-    overdue: plans.filter(p => isOverdue(p.nextDate, getTaskStatus(p))).length,
+    all: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())).length,
+    open: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Open").length,
+    onProgress: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "On Progress").length,
+    done: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Done").length,
+    waiting: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Waiting on Part").length,
+    overdue: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && isOverdue(p.nextDate, getTaskStatus(p.id, getTargetDateStr()))).length,
   };
 
   const timeTabs = [["yesterday","Kemarin"],["today","Hari Ini"],["tomorrow","Besok"]];
@@ -366,9 +375,12 @@ function ListTask() {
               {filtered.length === 0 ? (
                 <tr><td colSpan="10" className="px-6 py-12 text-center text-text-secondary">Tidak ada task yang sesuai filter.</td></tr>
               ) : filtered.map((plan, idx) => {
-                const status = getTaskStatus(plan);
+                const targetDateStr = getTargetDateStr();
+                const status = getTaskStatus(plan.id, targetDateStr);
                 const overdue = isOverdue(plan.nextDate, status);
-                const pics = normalizePic(plan.pic);
+                const key = `${plan.id}_${targetDateStr}`;
+                const pic = records[key]?.pic !== undefined && records[key]?.pic !== null ? records[key].pic : plan.pic;
+                const pics = normalizePic(pic);
                 return (
                   <tr key={plan.id} className={`hover:bg-btn-secondary/50 transition-colors ${overdue&&status!=="Done"?"bg-red-500/5":""}`}>
                     <td className="px-4 py-3 text-text-secondary font-mono text-xs">{idx+1}</td>

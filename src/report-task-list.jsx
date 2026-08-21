@@ -53,12 +53,17 @@ function ReportTaskList() {
     setRecords(loadRecords());
   }, []);
 
-  // Build enriched rows from all plans that have any record
-  const allRows = plans.map(plan => {
-    const rec = records[plan.id] || { status:"Open", startedAt:null, doneAt:null, waitingReason:null, evidencePhotos:[], archivedAt:null };
+  // Build enriched rows from all execution records
+  const allRows = Object.keys(records).map(key => {
+    const planId = key.includes("_") ? key.split("_")[0] : key;
+    const dateStr = key.includes("_") ? key.split("_")[1] : null;
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return null;
+    const rec = records[key];
     const elapsed = getElapsedDays(rec);
-    return { plan, rec, elapsed };
-  });
+    const executionDate = dateStr || plan.startDate;
+    return { plan, rec, elapsed, key, executionDate };
+  }).filter(Boolean);
 
   const filtered = allRows.filter(({ plan, rec }) => {
     const matchStatus = statusFilter === "Semua" || rec.status === statusFilter;
@@ -100,9 +105,8 @@ function ReportTaskList() {
       }
     }
 
-    // For report: only show tasks that have been touched (not purely Open with no record)
-    const hasTouched = !!records[plan.id];
-    return matchStatus && matchSearch && matchDateRange && matchMonth && (statusFilter !== "Semua" || hasTouched);
+    // For report: since we iterate over records, all tasks here are touched.
+    return matchStatus && matchSearch && matchDateRange && matchMonth;
   });
 
   const stats = {
@@ -127,27 +131,28 @@ function ReportTaskList() {
     doc.text(`Dicetak: ${new Date().toLocaleString("id-ID")}   Filter: ${statusFilter}`, 14, 22);
     doc.setTextColor(0);
 
-    const rows = filtered.map(({ plan, rec, elapsed }, i) => [
+    const rows = filtered.map(({ plan, rec, elapsed, executionDate }, i) => [
       i+1,
       plan.id,
+      executionDate,
       plan.areaName,
       plan.assetName,
       plan.taskDescription.length > 50 ? plan.taskDescription.substring(0,50)+"…" : plan.taskDescription,
-      normalizePic(plan.pic).join(", ") || "-",
+      normalizePic(rec.pic || plan.pic).join(", ") || "-",
       rec.status,
       elapsed !== null ? `${elapsed} hari` : "-",
-      formatDate(rec.startedAt),
-      formatDate(rec.doneAt),
-      rec.waitingReason ? (rec.waitingReason.length>40 ? rec.waitingReason.substring(0,40)+"…" : rec.waitingReason) : "-",
-      rec.evidencePhotos ? rec.evidencePhotos.length : 0,
+      formatDateTime(rec.startedAt),
+      formatDateTime(rec.doneAt),
+      rec.waitingReason || "-",
+      rec.evidencePhotos?.length ? "Ada" : "-"
     ]);
 
     doc.autoTable({
-      head: [["#","ID","Area","Asset","Task Description","PIC","Status","Durasi","Mulai","Selesai","Catatan Kendala","Foto"]],
+      startY: 28,
+      head: [["No", "ID Task", "Tgl. Jadwal", "Area", "Asset", "Deskripsi", "PIC", "Status", "Durasi", "Tgl. Mulai", "Tgl. Selesai", "Alasan Pending", "Foto"]],
       body: rows,
-      startY: 26,
-      theme: "grid",
-      headStyles: { fillColor:[30,36,46], textColor:255, fontSize:7, fontStyle:"bold" },
+      styles: { fontSize:7, cellPadding:1.5 },
+      headStyles: { fillColor: [40,44,52], textColor:255, fontSize:7, fontStyle:"bold" },
       bodyStyles: { fontSize:7, cellPadding:2 },
       columnStyles: { 4:{ cellWidth:50 }, 5:{ cellWidth:30 }, 10:{ cellWidth:40 } },
       alternateRowStyles: { fillColor:[245,247,250] },
@@ -163,27 +168,32 @@ function ReportTaskList() {
     const XLSX = window.XLSX;
     if (!XLSX) { alert("Library Excel belum dimuat. Refresh halaman."); setExporting(false); return; }
 
-    const wsData = [
-      ["No","ID Task","Kode Area","Nama Area","Nama Asset","Task Description","PIC","Status","Durasi (hari)","Tanggal Mulai","Tanggal Selesai","Alasan Kendala","Jumlah Foto"],
-      ...filtered.map(({ plan, rec, elapsed }, i) => [
-        i+1,
-        plan.id,
-        plan.plantCode||plan.areaId||"-",
-        plan.areaName,
-        plan.assetName,
-        plan.taskDescription,
-        normalizePic(plan.pic).join(", ") || "-",
-        rec.status,
-        elapsed !== null ? elapsed : "",
-        rec.startedAt ? new Date(rec.startedAt).toLocaleDateString("id-ID") : "",
-        rec.doneAt ? new Date(rec.doneAt).toLocaleDateString("id-ID") : "",
-        rec.waitingReason || "",
-        rec.evidencePhotos ? rec.evidencePhotos.length : 0,
-      ])
+    const headers = [
+      "No", "ID Task", "Tgl. Jadwal", "Kode Area", "Nama Lokasi", "Nama Asset", "Deskripsi",
+      "Frekuensi", "PIC", "Status", "Durasi Pengerjaan", "Waktu Mulai", "Waktu Selesai",
+      "Alasan Menunggu (Waiting)", "Jumlah Foto"
     ];
 
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws["!cols"] = [5,12,12,20,20,40,25,15,12,15,15,30,12].map(w => ({ wch:w }));
+    const data = filtered.map(({ plan, rec, elapsed, executionDate }, i) => [
+      i+1,
+      plan.id,
+      executionDate,
+      plan.plantCode || plan.areaId || "-",
+      plan.areaName,
+      plan.assetName,
+      plan.taskDescription,
+      plan.frequency,
+      normalizePic(rec.pic || plan.pic).join(", "),
+      rec.status,
+      elapsed !== null ? `${elapsed} hari` : "",
+      rec.startedAt ? new Date(rec.startedAt).toLocaleString("id-ID") : "",
+      rec.doneAt ? new Date(rec.doneAt).toLocaleString("id-ID") : "",
+      rec.waitingReason || "",
+      rec.evidencePhotos?.length || 0
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    ws["!cols"] = [5,12,12,12,15,20,40,15,20,15,15,20,20,30,12].map(w => ({ wch:w }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Report Task");
     XLSX.writeFile(wb, `Report_Task_${new Date().toISOString().split("T")[0]}.xlsx`);
@@ -194,7 +204,6 @@ function ReportTaskList() {
     <div className="flex flex-col h-full gap-4 text-text-primary font-sans">
       {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)}/>}
 
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-bg-surface p-4 rounded-xl border border-border-color shadow gap-3">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2"><FileText size={20} className="text-[#FF7043]"/> Report Task</h2>
@@ -205,25 +214,15 @@ function ReportTaskList() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={15}/>
             <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari task..." className="bg-bg-dark border border-border-color rounded-lg py-2 pl-8 pr-3 text-sm focus:outline-none focus:border-[#FF7043] w-44"/>
           </div>
-          {/* Export buttons */}
-          <button
-            onClick={exportPDF}
-            disabled={exporting}
-            className="flex items-center gap-2 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-          >
+          <button onClick={exportPDF} disabled={exporting} className="flex items-center gap-2 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
             <Download size={15}/> PDF
           </button>
-          <button
-            onClick={exportExcel}
-            disabled={exporting}
-            className="flex items-center gap-2 bg-green-700/90 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-          >
+          <button onClick={exportExcel} disabled={exporting} className="flex items-center gap-2 bg-green-700/90 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
             <Download size={15}/> Excel
           </button>
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label:"Total Tercatat", value:stats.total, color:"text-blue-400" },
@@ -238,7 +237,6 @@ function ReportTaskList() {
         ))}
       </div>
 
-      {/* Filter tabs & Date filters */}
       <div className="flex flex-col sm:flex-row gap-3 bg-bg-surface border border-border-color rounded-xl p-4">
         <div className="flex items-center gap-2">
           <Filter size={15} className="text-text-secondary"/>
@@ -263,7 +261,6 @@ function ReportTaskList() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-bg-surface rounded-xl border border-border-color shadow overflow-hidden flex-1 flex flex-col">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left text-sm whitespace-nowrap">
@@ -271,6 +268,7 @@ function ReportTaskList() {
               <tr>
                 <th className="px-4 py-3 font-medium">No</th>
                 <th className="px-4 py-3 font-medium">ID Task</th>
+                <th className="px-4 py-3 font-medium">Tgl. Jadwal</th>
                 <th className="px-4 py-3 font-medium">Area / Asset</th>
                 <th className="px-4 py-3 font-medium min-w-[200px]">Task Description</th>
                 <th className="px-4 py-3 font-medium">PIC</th>
@@ -284,69 +282,52 @@ function ReportTaskList() {
             </thead>
             <tbody className="divide-y divide-border-color">
               {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="11" className="px-6 py-16 text-center text-text-secondary">
-                    <FileText size={36} className="mx-auto mb-3 opacity-20"/>
-                    <p>Belum ada laporan task yang tercatat.</p>
-                    <p className="text-xs mt-1 opacity-60">Update status task di menu "Task List" untuk memulai pencatatan.</p>
+                <tr><td colSpan="12" className="px-6 py-12 text-center text-text-secondary">Tidak ada data laporan.</td></tr>
+              ) : filtered.map(({ plan, rec, elapsed, key, executionDate }, idx) => (
+                <tr key={key} className="hover:bg-btn-secondary/50 transition-colors">
+                  <td className="px-4 py-3 text-text-secondary font-mono text-xs">{idx+1}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-[#FF7043]">{plan.id}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-text-secondary">{formatDate(executionDate)}</td>
+                  <td className="px-4 py-3">
+                    <div className="text-xs text-text-secondary">{plan.areaName}</div>
+                    <div className="font-medium text-blue-400 text-sm">{plan.assetName}</div>
+                  </td>
+                  <td className="px-4 py-3 text-text-secondary max-w-[200px]" style={{whiteSpace:"normal", wordBreak:"break-word"}}>{plan.taskDescription}</td>
+                  <td className="px-4 py-3">
+                    {normalizePic(rec.pic || plan.pic).length > 0 
+                      ? <div className="flex flex-wrap gap-1">{normalizePic(rec.pic || plan.pic).map(n => <span key={n} className="px-1.5 py-0.5 bg-[#FF7043]/20 text-[#FF7043] border border-[#FF7043]/30 rounded text-xs">{n}</span>)}</div>
+                      : <span className="text-gray-600 text-xs">—</span>
+                    }
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold border flex items-center gap-1 w-fit ${STATUS_COLORS[rec.status]||STATUS_COLORS["Open"]}`}>
+                      {STATUS_ICONS[rec.status]}
+                      {rec.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {elapsed !== null
+                      ? <span className={`text-sm font-bold ${elapsed <= 1 ? "text-green-400" : elapsed <= 3 ? "text-yellow-400" : "text-red-400"}`}>{elapsed} hari</span>
+                      : <span className="text-gray-600 text-xs">—</span>
+                    }
+                  </td>
+                  <td className="px-4 py-3 text-text-secondary text-xs">{formatDateTime(rec.startedAt)}</td>
+                  <td className="px-4 py-3 text-text-secondary text-xs">{formatDateTime(rec.doneAt)}</td>
+                  <td className="px-4 py-3 text-yellow-300 text-xs">{rec.waitingReason || "-"}</td>
+                  <td className="px-4 py-3">
+                    {rec.evidencePhotos && rec.evidencePhotos.length > 0 ? (
+                      <div className="flex gap-1">
+                        {rec.evidencePhotos.slice(0,3).map((src,i) => (
+                          <button key={i} onClick={() => setLightboxSrc(src)} className="w-9 h-9 rounded-lg overflow-hidden border border-border-color hover:border-green-400 transition-colors">
+                            <img src={src} alt={`Foto ${i+1}`} className="w-full h-full object-cover"/>
+                          </button>
+                        ))}
+                      </div>
+                    ) : <span className="text-gray-600 text-xs">—</span>}
                   </td>
                 </tr>
-              ) : filtered.map(({ plan, rec, elapsed }, idx) => {
-                const pics = normalizePic(plan.pic);
-                return (
-                  <tr key={plan.id} className="hover:bg-btn-secondary/50 transition-colors">
-                    <td className="px-4 py-3 text-text-secondary font-mono text-xs">{idx+1}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-[#FF7043]">{plan.id}</td>
-                    <td className="px-4 py-3">
-                      <div className="text-xs text-text-secondary">{plan.areaName}</div>
-                      <div className="font-medium text-blue-400 text-sm">{plan.assetName}</div>
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary max-w-[200px]" style={{whiteSpace:"normal", wordBreak:"break-word"}}>{plan.taskDescription}</td>
-                    <td className="px-4 py-3">
-                      {pics.length > 0
-                        ? <div className="flex flex-wrap gap-1">{pics.map(n => <span key={n} className="px-1.5 py-0.5 bg-[#FF7043]/20 text-[#FF7043] border border-[#FF7043]/30 rounded text-xs">{n}</span>)}</div>
-                        : <span className="text-gray-600 text-xs">—</span>
-                      }
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-semibold border flex items-center gap-1 w-fit ${STATUS_COLORS[rec.status]||STATUS_COLORS["Open"]}`}>
-                        {STATUS_ICONS[rec.status]}
-                        {rec.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {elapsed !== null
-                        ? <span className={`text-sm font-bold ${elapsed <= 1 ? "text-green-400" : elapsed <= 3 ? "text-yellow-400" : "text-red-400"}`}>{elapsed} hari</span>
-                        : <span className="text-gray-600 text-xs">—</span>
-                      }
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary text-xs">{formatDate(rec.startedAt)}</td>
-                    <td className="px-4 py-3 text-text-secondary text-xs">{formatDate(rec.doneAt)}</td>
-                    <td className="px-4 py-3">
-                      {rec.waitingReason
-                        ? <span className="text-yellow-300 text-xs" style={{whiteSpace:"normal", wordBreak:"break-word", maxWidth:160, display:"block"}}>{rec.waitingReason}</span>
-                        : <span className="text-gray-600 text-xs">—</span>
-                      }
-                    </td>
-                    <td className="px-4 py-3">
-                      {rec.evidencePhotos && rec.evidencePhotos.length > 0 ? (
-                        <div className="flex gap-1">
-                          {rec.evidencePhotos.slice(0,3).map((src,i) => (
-                            <button key={i} onClick={() => setLightboxSrc(src)} className="w-9 h-9 rounded-lg overflow-hidden border border-border-color hover:border-green-400 transition-colors">
-                              <img src={src} alt={`Foto ${i+1}`} className="w-full h-full object-cover"/>
-                            </button>
-                          ))}
-                          {rec.evidencePhotos.length > 3 && (
-                            <div className="w-9 h-9 rounded-lg bg-bg-dark border border-border-color flex items-center justify-center text-[10px] text-text-secondary">+{rec.evidencePhotos.length-3}</div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-gray-600 text-xs flex items-center gap-1"><ImageIcon size={12}/> —</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              ))}
+
             </tbody>
           </table>
         </div>

@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { CheckCircle, Clock, AlertTriangle, Search, Upload, X, Camera, FileText } from "lucide-react";
 import { loadPlans, loadRecords, setStatus as storeSetStatus, getRecord, getElapsedDays, normalizePic, isScheduledOnDate } from "./maintenance-store.js";
 
-const STATUS_OPTIONS = ["All","On Progress","Open","Done","Waiting on Part"];
+const STATUS_OPTIONS = ["All","On Progress","Open","Waiting on Part"];
 const FREQ_COLORS = {
   Daily:"bg-red-500/20 text-red-400", Weekly:"bg-orange-500/20 text-orange-400",
   Monthly:"bg-blue-500/20 text-blue-400", Quarterly:"bg-purple-500/20 text-purple-400",
@@ -250,6 +250,7 @@ function ListTask() {
 
   const filtered = plans.filter(plan => {
     const status = getTaskStatus(plan);
+    if (status === "Done") return false;
     const matchStatus = statusFilter === "All" || status === statusFilter;
     const matchSearch = !searchQuery || plan.assetName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.areaName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.taskDescription.toLowerCase().includes(searchQuery.toLowerCase());
     

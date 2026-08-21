@@ -34,7 +34,7 @@ function computeNextDate(startDate, frequency) {
 }
 
 /* ── PicTagInput ───────────────────────────────────────────────── */
-function PicTagInput({ value, onChange, workers }) {
+function PicTagInput({ value, onChange, workers, disabled }) {
   const [popoverMode, setPopoverMode] = useState(null); // 'add', 'view', or null
   const [query, setQuery] = useState("");
   const ref = useRef(null);
@@ -56,13 +56,15 @@ function PicTagInput({ value, onChange, workers }) {
       <span className="font-bold text-sm bg-bg-dark border border-border-color px-2.5 py-1 rounded-lg text-text-primary min-w-[32px] text-center" title="Jumlah PIC bertugas">
         {selected.length}
       </span>
-      <button 
-        onClick={() => { setPopoverMode(m => m === 'add' ? null : 'add'); setQuery(""); }} 
-        className={`p-1.5 border rounded-full transition-colors ${popoverMode === 'add' ? 'bg-[#FF7043] border-[#FF7043] text-white' : 'bg-btn-secondary hover:bg-bg-dark border-transparent hover:border-[#FF7043] text-text-primary'}`}
-        title="Tambah PIC"
-      >
-        <Plus size={14}/>
-      </button>
+      {!disabled && (
+        <button 
+          onClick={() => { setPopoverMode(m => m === 'add' ? null : 'add'); setQuery(""); }} 
+          className={`p-1.5 border rounded-full transition-colors ${popoverMode === 'add' ? 'bg-[#FF7043] border-[#FF7043] text-white' : 'bg-btn-secondary hover:bg-bg-dark border-transparent hover:border-[#FF7043] text-text-primary'}`}
+          title="Tambah PIC"
+        >
+          <Plus size={14}/>
+        </button>
+      )}
       <button 
         onClick={() => setPopoverMode(m => m === 'view' ? null : 'view')} 
         className={`p-1.5 border rounded-full transition-colors ${popoverMode === 'view' ? 'bg-blue-500 border-blue-500 text-white' : 'bg-btn-secondary hover:bg-bg-dark border-transparent hover:border-blue-400 text-text-primary'}`}
@@ -104,9 +106,11 @@ function PicTagInput({ value, onChange, workers }) {
               {selected.map(name => (
                 <div key={name} className="flex items-center justify-between bg-bg-dark rounded px-2 py-1.5 border border-border-color">
                   <span className="text-xs text-text-primary font-medium truncate pr-2">{name}</span>
-                  <button onClick={() => remove(name)} className="text-red-400 hover:text-white p-1 rounded hover:bg-red-500 transition-colors shrink-0" title="Hapus PIC">
-                    <Trash2 size={12}/>
-                  </button>
+                  {!disabled && (
+                    <button onClick={() => remove(name)} className="text-red-400 hover:text-white p-1 rounded hover:bg-red-500 transition-colors shrink-0" title="Hapus PIC">
+                      <Trash2 size={12}/>
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -276,7 +280,7 @@ function MaintenanceSchedule() {
                       <td className="px-4 py-3 text-text-secondary max-w-[200px]" style={{whiteSpace:"normal"}}>{plan.taskDescription}</td>
                       <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-xs font-semibold ${FREQ_COLORS[plan.frequency]||"bg-gray-500/20 text-gray-400"}`}>{plan.frequency}</span></td>
                       <td className="px-4 py-3">
-                        <PicTagInput value={plan.pic} onChange={(v) => updatePic(plan.id, v)} workers={workers}/>
+                        <PicTagInput value={plan.pic} onChange={(v) => updatePic(plan.id, v)} workers={workers} disabled={ts === "Done"}/>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${TASK_STATUS_COLORS[ts]||TASK_STATUS_COLORS["Open"]}`}>{ts}</span>

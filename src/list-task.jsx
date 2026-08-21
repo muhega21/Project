@@ -231,43 +231,67 @@ function ListTask() {
     return `${targetDate.getFullYear()}-${String(targetDate.getMonth()+1).padStart(2,"0")}-${String(targetDate.getDate()).padStart(2,"0")}`;
   };
 
+  const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
+  const getInstances = () => {
+    const inst = [];
+    const datesToCompute = [];
+    if (timeFilter === "all") {
+      const t = new Date();
+      const y = new Date(t); y.setDate(t.getDate() - 1);
+      const m = new Date(t); m.setDate(t.getDate() + 1);
+      datesToCompute.push(fmt(y), fmt(t), fmt(m));
+    } else {
+      datesToCompute.push(getTargetDateStr());
+    }
+
+    plans.forEach(plan => {
+      datesToCompute.forEach(dateStr => {
+        if (isScheduledOnDate(plan.startDate, plan.frequency, dateStr)) {
+          const status = getTaskStatus(plan.id, dateStr);
+          if (timeFilter === "all" && status === "Done") return;
+          inst.push({ plan, targetDateStr: dateStr });
+        }
+      });
+    });
+    return inst;
+  };
+
   const getTaskStatus = (planId, targetDateStr) => {
     const key = `${planId}_${targetDateStr}`;
     return records[key]?.status || "Open";
   };
 
   // Smart status handler
-  const handleStatusChange = (plan, newStatus) => {
-    const targetDateStr = getTargetDateStr();
+  const handleStatusChange = (plan, targetDateStr, newStatus) => {
     const current = getTaskStatus(plan.id, targetDateStr);
     if (newStatus === current) return;
-    if (newStatus === "Done") { setDoneModal(plan); return; }
-    if (newStatus === "Waiting on Part") { setWaitingModal(plan); return; }
+    if (newStatus === "Done") { setDoneModal({ plan, targetDateStr }); return; }
+    if (newStatus === "Waiting on Part") { setWaitingModal({ plan, targetDateStr }); return; }
     // On Progress or Open — direct
     storeSetStatus(plan.id, targetDateStr, newStatus);
     setRecords(loadRecords());
   };
 
-  const confirmDone = (plan, photos) => {
-    const targetDateStr = getTargetDateStr();
-    storeSetStatus(plan.id, targetDateStr, "Done", { evidencePhotos: photos });
+  const confirmDone = (modalState, photos) => {
+    storeSetStatus(modalState.plan.id, modalState.targetDateStr, "Done", { evidencePhotos: photos });
     setDoneModal(null);
     setRecords(loadRecords());
   };
 
-  const confirmWaiting = (plan, reason) => {
-    const targetDateStr = getTargetDateStr();
-    storeSetStatus(plan.id, targetDateStr, "Waiting on Part", { waitingReason: reason });
+  const confirmWaiting = (modalState, reason) => {
+    storeSetStatus(modalState.plan.id, modalState.targetDateStr, "Waiting on Part", { waitingReason: reason });
     setWaitingModal(null);
     setRecords(loadRecords());
   };
 
-  const filtered = plans.filter(plan => {
-    const targetDateStr = getTargetDateStr();
+  const instances = getInstances();
+
+  const filtered = instances.filter(({ plan, targetDateStr }) => {
     const status = getTaskStatus(plan.id, targetDateStr);
     
-    // Sembunyikan "Done" kecuali sedang difilter khusus "Done"
-    if (status === "Done" && statusFilter !== "Done") return false;
+    // Sembunyikan "Done" kecuali sedang difilter khusus "Done" (untuk timeFilter !== "all")
+    if (timeFilter !== "all" && status === "Done" && statusFilter !== "Done") return false;
     
     const isTaskOverdue = isOverdue(targetDateStr, status);
     if (statusFilter === "Overdue" && !isTaskOverdue) return false;
@@ -275,13 +299,10 @@ function ListTask() {
     const matchStatus = statusFilter === "All" || statusFilter === "Overdue" || status === statusFilter;
     const matchSearch = !searchQuery || plan.assetName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.areaName.toLowerCase().includes(searchQuery.toLowerCase()) || plan.taskDescription.toLowerCase().includes(searchQuery.toLowerCase());
     
-    let matchTime = isScheduledOnDate(plan.startDate, plan.frequency, targetDateStr);
-    
-    return matchStatus && matchSearch && matchTime;
+    return matchStatus && matchSearch;
   });
 
-  const getStatusBadge = (plan) => {
-    const targetDateStr = getTargetDateStr();
+  const getStatusBadge = (plan, targetDateStr) => {
     const status = getTaskStatus(plan.id, targetDateStr);
     const overdue = isOverdue(targetDateStr, status);
     const map = {
@@ -293,8 +314,7 @@ function ListTask() {
     return <div className="flex flex-col gap-1">{map[status]||map["Open"]}{overdue && <span className="px-2 py-0.5 bg-red-500/20 text-red-400 rounded text-[10px] border border-red-500/40 flex items-center gap-1 w-fit"><AlertTriangle size={10}/> OVERDUE</span>}</div>;
   };
 
-  const getElapsedBadge = (plan) => {
-    const targetDateStr = getTargetDateStr();
+  const getElapsedBadge = (plan, targetDateStr) => {
     const key = `${plan.id}_${targetDateStr}`;
     const rec = records[key];
     
@@ -317,12 +337,12 @@ function ListTask() {
   };
 
   const statCounts = {
-    all: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr())).length,
-    open: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Open").length,
-    onProgress: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "On Progress").length,
-    done: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Done").length,
-    waiting: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && getTaskStatus(p.id, getTargetDateStr()) === "Waiting on Part").length,
-    overdue: plans.filter(p => isScheduledOnDate(p.startDate, p.frequency, getTargetDateStr()) && isOverdue(getTargetDateStr(), getTaskStatus(p.id, getTargetDateStr()))).length,
+    all: instances.length,
+    open: instances.filter(({plan, targetDateStr}) => getTaskStatus(plan.id, targetDateStr) === "Open").length,
+    onProgress: instances.filter(({plan, targetDateStr}) => getTaskStatus(plan.id, targetDateStr) === "On Progress").length,
+    done: instances.filter(({plan, targetDateStr}) => getTaskStatus(plan.id, targetDateStr) === "Done").length,
+    waiting: instances.filter(({plan, targetDateStr}) => getTaskStatus(plan.id, targetDateStr) === "Waiting on Part").length,
+    overdue: instances.filter(({plan, targetDateStr}) => isOverdue(targetDateStr, getTaskStatus(plan.id, targetDateStr))).length,
   };
 
   const timeTabs = [["all", "Semua"], ["yesterday","Kemarin"],["today","Hari Ini"],["tomorrow","Besok"]];
@@ -331,8 +351,8 @@ function ListTask() {
     <div className="flex flex-col h-full gap-4 text-text-primary font-sans">
 
       {/* Modals */}
-      {doneModal && <DoneModal plan={doneModal} onConfirm={(photos) => confirmDone(doneModal, photos)} onCancel={() => setDoneModal(null)}/>}
-      {waitingModal && <WaitingModal plan={waitingModal} onConfirm={(reason) => confirmWaiting(waitingModal, reason)} onCancel={() => setWaitingModal(null)}/>}
+      {doneModal && <DoneModal plan={doneModal.plan} onConfirm={(photos) => confirmDone(doneModal, photos)} onCancel={() => setDoneModal(null)}/>}
+      {waitingModal && <WaitingModal plan={waitingModal.plan} onConfirm={(reason) => confirmWaiting(waitingModal, reason)} onCancel={() => setWaitingModal(null)}/>}
 
 
       {/* Stats */}
@@ -357,10 +377,7 @@ function ListTask() {
         <Clock size={16} className="text-text-secondary"/>
         <div className="flex gap-1">
           {timeTabs.map(([k,l]) => (
-            <button key={k} onClick={() => {
-              if (k === "all") window.location.href = '/maintenance-schedule.html';
-              else setTimeFilter(k);
-            }} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${timeFilter===k?"bg-[#FF7043] text-white":"text-text-secondary hover:bg-btn-secondary"}`}>{l}</button>
+            <button key={k} onClick={() => setTimeFilter(k)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${timeFilter===k?"bg-[#FF7043] text-white":"text-text-secondary hover:bg-btn-secondary"}`}>{l}</button>
           ))}
         </div>
       </div>
@@ -386,17 +403,19 @@ function ListTask() {
             <tbody className="divide-y divide-border-color">
               {filtered.length === 0 ? (
                 <tr><td colSpan="10" className="px-6 py-12 text-center text-text-secondary">Tidak ada task yang sesuai filter.</td></tr>
-              ) : filtered.map((plan, idx) => {
-                const targetDateStr = getTargetDateStr();
+              ) : filtered.map(({ plan, targetDateStr }, idx) => {
                 const status = getTaskStatus(plan.id, targetDateStr);
                 const overdue = isOverdue(targetDateStr, status);
                 const key = `${plan.id}_${targetDateStr}`;
                 const pic = records[key]?.pic !== undefined && records[key]?.pic !== null ? records[key].pic : plan.pic;
                 const pics = normalizePic(pic);
                 return (
-                  <tr key={plan.id} className={`hover:bg-btn-secondary/50 transition-colors ${overdue&&status!=="Done"?"bg-red-500/5":""}`}>
+                  <tr key={key} className={`hover:bg-btn-secondary/50 transition-colors ${overdue&&status!=="Done"?"bg-red-500/5":""}`}>
                     <td className="px-4 py-3 text-text-secondary font-mono text-xs">{idx+1}</td>
-                    <td className="px-4 py-3 text-text-secondary">{plan.plantCode||plan.areaId||"-"}</td>
+                    <td className="px-4 py-3 text-text-secondary">
+                      {plan.plantCode||plan.areaId||"-"}
+                      {timeFilter === "all" && <div className="text-[10px] text-blue-400 mt-0.5">{targetDateStr}</div>}
+                    </td>
                     <td className="px-4 py-3 font-medium">{plan.areaName}</td>
                     <td className="px-4 py-3 font-medium text-blue-400">{plan.assetName}</td>
                     <td className="px-4 py-3 text-text-secondary max-w-[180px] truncate" title={plan.taskDescription}>{plan.taskDescription}</td>
@@ -407,13 +426,13 @@ function ListTask() {
                         : <span className="text-gray-600 text-xs">—</span>
                       }
                     </td>
-                    <td className="px-4 py-3">{getStatusBadge(plan)}</td>
-                    <td className="px-4 py-3">{getElapsedBadge(plan)}</td>
+                    <td className="px-4 py-3">{getStatusBadge(plan, targetDateStr)}</td>
+                    <td className="px-4 py-3">{getElapsedBadge(plan, targetDateStr)}</td>
                     <td className="px-4 py-3">
                       {status !== "Done" ? (
                         <select
                           value={status}
-                          onChange={(e) => handleStatusChange(plan, e.target.value)}
+                          onChange={(e) => handleStatusChange(plan, targetDateStr, e.target.value)}
                           className="bg-bg-dark border border-border-color rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#FF7043]"
                         >
                           <option value="Open">Open</option>

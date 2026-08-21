@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { CheckCircle, Clock, AlertTriangle, Search, Download, FileText, Image as ImageIcon, Filter } from "lucide-react";
 import { loadPlans, loadRecords, getElapsedDays, normalizePic } from "./maintenance-store.js";
@@ -44,6 +44,9 @@ function ReportTaskList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
+  const [monthFilter, setMonthFilter] = useState("");
 
   useEffect(() => {
     setPlans(loadPlans());
@@ -64,9 +67,42 @@ function ReportTaskList() {
       || plan.taskDescription.toLowerCase().includes(searchQuery.toLowerCase())
       || plan.areaName.toLowerCase().includes(searchQuery.toLowerCase())
       || plan.id.toLowerCase().includes(searchQuery.toLowerCase());
+      
+    let matchDateRange = true;
+    if (startDateFilter || endDateFilter) {
+      const taskDateStr = rec.doneAt || rec.startedAt;
+      if (taskDateStr) {
+        const tDate = new Date(taskDateStr);
+        tDate.setHours(0,0,0,0);
+        if (startDateFilter) {
+           const sDate = new Date(startDateFilter);
+           sDate.setHours(0,0,0,0);
+           if (tDate < sDate) matchDateRange = false;
+        }
+        if (endDateFilter) {
+           const eDate = new Date(endDateFilter);
+           eDate.setHours(23,59,59,999);
+           if (tDate > eDate) matchDateRange = false;
+        }
+      } else {
+        matchDateRange = false;
+      }
+    }
+
+    let matchMonth = true;
+    if (monthFilter) {
+      const taskDateStr = rec.doneAt || rec.startedAt;
+      if (taskDateStr) {
+         const tMonth = taskDateStr.substring(0, 7); // YYYY-MM
+         if (tMonth !== monthFilter) matchMonth = false;
+      } else {
+         matchMonth = false;
+      }
+    }
+
     // For report: only show tasks that have been touched (not purely Open with no record)
     const hasTouched = !!records[plan.id];
-    return matchStatus && matchSearch && (statusFilter !== "Semua" || hasTouched);
+    return matchStatus && matchSearch && matchDateRange && matchMonth && (statusFilter !== "Semua" || hasTouched);
   });
 
   const stats = {
@@ -202,15 +238,29 @@ function ReportTaskList() {
         ))}
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex items-center gap-2 bg-bg-surface border border-border-color rounded-xl px-4 py-2">
-        <Filter size={15} className="text-text-secondary"/>
-        <div className="flex gap-1">
-          {FILTER_OPTIONS.map(o => (
-            <button key={o} onClick={() => setStatusFilter(o)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${statusFilter===o?"bg-[#FF7043] text-white":"text-text-secondary hover:bg-btn-secondary"}`}>{o}</button>
-          ))}
+      {/* Filter tabs & Date filters */}
+      <div className="flex flex-col sm:flex-row gap-3 bg-bg-surface border border-border-color rounded-xl p-4">
+        <div className="flex items-center gap-2">
+          <Filter size={15} className="text-text-secondary"/>
+          <div className="flex flex-wrap gap-1">
+            {FILTER_OPTIONS.map(o => (
+              <button key={o} onClick={() => setStatusFilter(o)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${statusFilter===o?"bg-[#FF7043] text-white":"text-text-secondary hover:bg-btn-secondary"}`}>{o}</button>
+            ))}
+          </div>
         </div>
-        <span className="ml-auto text-xs text-text-secondary">{filtered.length} data</span>
+        <div className="flex flex-wrap gap-3 sm:ml-auto items-center">
+          <div className="flex items-center gap-2 bg-bg-dark border border-border-color rounded-lg px-2 py-1.5">
+            <span className="text-xs text-text-secondary">Rentang:</span>
+            <input type="date" value={startDateFilter} onChange={e => { setStartDateFilter(e.target.value); setMonthFilter(""); }} className="bg-transparent text-xs text-text-primary focus:outline-none"/>
+            <span className="text-text-secondary text-xs">-</span>
+            <input type="date" value={endDateFilter} onChange={e => { setEndDateFilter(e.target.value); setMonthFilter(""); }} className="bg-transparent text-xs text-text-primary focus:outline-none"/>
+          </div>
+          <div className="flex items-center gap-2 bg-bg-dark border border-border-color rounded-lg px-2 py-1.5">
+            <span className="text-xs text-text-secondary">Bulan:</span>
+            <input type="month" value={monthFilter} onChange={e => { setMonthFilter(e.target.value); setStartDateFilter(""); setEndDateFilter(""); }} className="bg-transparent text-xs text-text-primary focus:outline-none"/>
+          </div>
+          <span className="text-xs text-text-secondary ml-2 font-medium">{filtered.length} data</span>
+        </div>
       </div>
 
       {/* Table */}

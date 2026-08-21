@@ -49,6 +49,10 @@ export function updateRecord(planId, dateStr, patch) {
 export function setStatus(planId, dateStr, newStatus, extraData) {
   const current = getRecord(planId, dateStr);
   const patch = Object.assign({ status: newStatus }, extraData || {});
+  // Always store the schedule date so duration can be computed from it
+  if (dateStr && !current.scheduledDate) {
+    patch.scheduledDate = dateStr;
+  }
   if (newStatus === "On Progress" && !current.startedAt) {
     patch.startedAt = new Date().toISOString();
   }

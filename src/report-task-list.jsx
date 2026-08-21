@@ -15,7 +15,7 @@ const STATUS_ICONS = {
   "Waiting on Part":<AlertTriangle size={12}/>,
   "Open":<span className="w-2 h-2 rounded-full bg-gray-400 inline-block"/>,
 };
-const FILTER_OPTIONS = ["Semua","Done","On Progress","Waiting on Part"];
+const FILTER_OPTIONS = ["Semua","Open","On Progress","Waiting on Part","Done"];
 
 function formatDate(iso) {
   if (!iso) return "-";
@@ -55,13 +55,18 @@ function ReportTaskList() {
 
   // Build enriched rows from all execution records
   const allRows = Object.keys(records).map(key => {
-    const planId = key.includes("_") ? key.split("_")[0] : key;
+    const planId  = key.includes("_") ? key.split("_")[0] : key;
     const dateStr = key.includes("_") ? key.split("_")[1] : null;
-    const plan = plans.find(p => p.id === planId);
+    const plan    = plans.find(p => p.id === planId);
     if (!plan) return null;
-    const rec = records[key];
-    const elapsed = getElapsedDays(rec);
-    const executionDate = dateStr || plan.startDate;
+    const rec     = records[key];
+    const schedDate = rec.scheduledDate || dateStr || plan.startDate;
+    // Durasi: dari tanggal jadwal ke doneAt (atau sekarang jika masih berjalan)
+    const startRef  = new Date(schedDate); startRef.setHours(0,0,0,0);
+    const endRef    = rec.doneAt ? new Date(rec.doneAt) : new Date();
+    endRef.setHours(0,0,0,0);
+    const elapsed   = Math.max(0, Math.floor((endRef - startRef) / 86400000));
+    const executionDate = schedDate;
     return { plan, rec, elapsed, key, executionDate };
   }).filter(Boolean);
 
@@ -110,10 +115,11 @@ function ReportTaskList() {
   });
 
   const stats = {
-    done: allRows.filter(r => r.rec.status === "Done").length,
+    done:       allRows.filter(r => r.rec.status === "Done").length,
     onProgress: allRows.filter(r => r.rec.status === "On Progress").length,
-    waiting: allRows.filter(r => r.rec.status === "Waiting on Part").length,
-    total: Object.keys(records).length,
+    waiting:    allRows.filter(r => r.rec.status === "Waiting on Part").length,
+    open:       allRows.filter(r => r.rec.status === "Open").length,
+    total:      allRows.length,
   };
 
   /* ── PDF Export ─────────────────────────────────────────────────── */
@@ -225,10 +231,10 @@ function ReportTaskList() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label:"Total Tercatat", value:stats.total, color:"text-blue-400" },
-          { label:"Done", value:stats.done, color:"text-green-400" },
-          { label:"On Progress", value:stats.onProgress, color:"text-blue-300" },
-          { label:"Waiting on Part", value:stats.waiting, color:"text-yellow-400" },
+          { label:"Total Tercatat",    value:stats.total,      color:"text-blue-400" },
+          { label:"Done",              value:stats.done,       color:"text-green-400" },
+          { label:"On Progress",       value:stats.onProgress, color:"text-blue-300" },
+          { label:"Waiting on Part",   value:stats.waiting,    color:"text-yellow-400" },
         ].map((s,i) => (
           <div key={i} className="bg-bg-surface border border-border-color rounded-xl p-4 text-center">
             <div className="text-text-secondary text-xs mb-1">{s.label}</div>
@@ -308,7 +314,7 @@ function ReportTaskList() {
                   <td className="px-4 py-3">
                     {elapsed !== null
                       ? <span className={`text-sm font-bold ${elapsed <= 1 ? "text-green-400" : elapsed <= 3 ? "text-yellow-400" : "text-red-400"}`}>{elapsed} hari</span>
-                      : <span className="text-gray-600 text-xs">—</span>
+                      : <span className="text-gray-600 text-xs">0 hari</span>
                     }
                   </td>
                   <td className="px-4 py-3 text-text-secondary text-xs">{formatDateTime(rec.startedAt)}</td>

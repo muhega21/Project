@@ -443,27 +443,6 @@ function MaintenancePlanning() {
 
             <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
 
-              {/* Task Type */}
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">Tipe Task <span className="text-red-500">*</span></label>
-                <div className="flex gap-3">
-                  {['Preventive', 'Corrective'].map(type => (
-                    <button key={type} type="button"
-                      onClick={() => setForm(prev => ({ ...prev, taskType: type }))}
-                      className={`flex-1 py-2.5 rounded-lg border font-semibold text-sm transition-colors ${
-                        form.taskType === type
-                          ? type === 'Corrective'
-                            ? 'bg-red-500/20 border-red-500/50 text-red-400'
-                            : 'bg-blue-500/20 border-blue-500/50 text-blue-400'
-                          : 'bg-transparent border-border-color text-text-secondary hover:border-[#FF7043]'
-                      }`}>
-                      {type === 'Corrective' ? 'C — Corrective' : 'P — Preventive'}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-text-secondary mt-1">ID Task akan otomatis diberi prefix sesuai tipe: <strong className="text-blue-400">P-XXXXX</strong> atau <strong className="text-red-400">C-XXXXX</strong></p>
-              </div>
-
               {/* Plant / Zone / Asset Selection */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

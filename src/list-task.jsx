@@ -198,7 +198,7 @@ function ListTask() {
   const [records, setRecords] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [timeFilter, setTimeFilter] = useState("all");
+  const [timeFilter, setTimeFilter] = useState("today");
   const [doneModal, setDoneModal] = useState(null);   // plan object
   const [waitingModal, setWaitingModal] = useState(null); // plan object
   const [tick, setTick] = useState(0); // force re-render for elapsed timer
@@ -301,7 +301,7 @@ function ListTask() {
     overdue: plans.filter(p => isOverdue(p.nextDate, getTaskStatus(p))).length,
   };
 
-  const timeTabs = [["all","Semua"],["yesterday","Kemarin"],["today","Hari Ini"],["tomorrow","Besok"]];
+  const timeTabs = [["yesterday","Kemarin"],["today","Hari Ini"],["tomorrow","Besok"]];
 
   return (
     <div className="flex flex-col h-full gap-4 text-text-primary font-sans">

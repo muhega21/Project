@@ -4,94 +4,179 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard Utama - MaintainX</title>
-    
-    <!-- Google Fonts: Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <!-- Chart.js + 3D plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://src/auth-guard.js"></script>
+    <meta name="view-transition" content="same-origin">
     <style>
-      /* Tambahan Styling Khusus Dashboard */
-      body {
-        background-color: var(--bg-color);
-        color: var(--text-primary);
-        margin: 0;
-        font-family: 'Outfit', sans-serif;
+      :root {
+        --grad-blue: linear-gradient(135deg, #1e3a5f 0%, #0f2849 100%);
+        --grad-teal: linear-gradient(135deg, #0d4f4f 0%, #0a3838 100%);
+        --grad-orange: linear-gradient(135deg, #7c2d0e 0%, #5a1e06 100%);
+        --grad-purple: linear-gradient(135deg, #3b1f6e 0%, #251344 100%);
+        --grad-green: linear-gradient(135deg, #0f4c2a 0%, #0a3320 100%);
+        --grad-red: linear-gradient(135deg, #5c1a1a 0%, #3d0f0f 100%);
+        --neon-blue: #38bdf8;
+        --neon-teal: #2dd4bf;
+        --neon-orange: #fb923c;
+        --neon-purple: #a78bfa;
+        --neon-green: #4ade80;
+        --neon-red: #f87171;
+        --neon-yellow: #fbbf24;
       }
-      .dashboard-layout {
-        display: flex;
-        height: 100vh;
+      body { background-color: var(--bg-color); color: var(--text-primary); margin: 0; font-family: 'Outfit', sans-serif; }
+      .dashboard-layout { display: flex; height: 100vh; overflow: hidden; }
+      .main-content { flex: 1; padding: 0; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+      .content-body { padding: 20px 24px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+
+      /* === KPI CARDS === */
+      .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+      @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+      .kpi-card {
+        border-radius: 14px;
+        padding: 16px 18px;
+        border: 1px solid rgba(255,255,255,0.08);
+        position: relative;
         overflow: hidden;
-      }
-      .main-content {
-        flex: 1;
-        padding: 0;
-        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
         display: flex;
         flex-direction: column;
-        min-width: 0;
+        gap: 8px;
       }
-      .content-body {
-        padding: 32px;
-        flex: 1;
-        overflow-y: auto;
-      }
-      .user-profile {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .avatar {
-        width: 40px;
-        height: 40px;
+      .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+      .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0; right: 0;
+        width: 100px; height: 100px;
         border-radius: 50%;
-        background: var(--accent-gradient);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
+        opacity: 0.15;
+        transform: translate(30%, -30%);
+        filter: blur(24px);
       }
-      .btn-logout {
-        padding: 8px 16px;
-        border-radius: 6px;
-        background: transparent;
-        color: var(--text-secondary);
-        border: 1px solid var(--border-color);
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-      .btn-logout:hover {
-        background: rgba(255,255,255,0.1);
-        color: white;
-      }
-      /* Grid Stat */
-      .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 24px;
-        margin-bottom: 32px;
-      }
-      .card {
+      .kpi-card.blue { background: var(--grad-blue); }
+      .kpi-card.blue::before { background: var(--neon-blue); }
+      .kpi-card.teal { background: var(--grad-teal); }
+      .kpi-card.teal::before { background: var(--neon-teal); }
+      .kpi-card.orange { background: var(--grad-orange); }
+      .kpi-card.orange::before { background: var(--neon-orange); }
+      .kpi-card.purple { background: var(--grad-purple); }
+      .kpi-card.purple::before { background: var(--neon-purple); }
+      .kpi-card.green { background: var(--grad-green); }
+      .kpi-card.green::before { background: var(--neon-green); }
+      .kpi-card.red { background: var(--grad-red); }
+      .kpi-card.red::before { background: var(--neon-red); }
+
+      .kpi-top { display: flex; align-items: center; justify-content: space-between; }
+      .kpi-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+      .kpi-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); }
+      .kpi-value { font-size: 2rem; font-weight: 800; line-height: 1; }
+      .kpi-sub { font-size: 0.72rem; opacity: 0.65; display: flex; align-items: center; gap: 6px; }
+      .kpi-badge { padding: 2px 7px; border-radius: 20px; font-size: 0.65rem; font-weight: 700; }
+      .badge-up { background: rgba(74,222,128,0.2); color: #4ade80; }
+      .badge-down { background: rgba(248,113,113,0.2); color: #f87171; }
+      .badge-warn { background: rgba(251,191,36,0.2); color: #fbbf24; }
+      .kpi-sparkline { height: 36px; position: relative; }
+      .kpi-sparkline canvas { width: 100% !important; height: 36px !important; }
+
+      /* === SECTION HEADERS === */
+      .section-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+      .section-hdr span { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); }
+      .section-hdr::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+
+      /* === CHART PANELS === */
+      .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .chart-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+      @media (max-width: 900px) { .chart-row, .chart-row-3 { grid-template-columns: 1fr; } }
+
+      .panel {
         background: var(--glass-bg);
         border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 24px;
+        border-radius: 14px;
+        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
       }
-      .card-title {
-        color: var(--text-secondary);
-        font-size: 0.95rem;
-        margin-bottom: 12px;
-      }
-      .card-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 8px;
-      }
+      .panel-hdr { display: flex; align-items: center; justify-content: space-between; }
+      .panel-title { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); }
+      .panel-canvas-wrap { position: relative; flex: 1; min-height: 0; }
+
+      /* Pie / Bar legend */
+      .chart-legend { display: flex; flex-direction: column; gap: 5px; }
+      .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; }
+      .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+      .legend-label { color: var(--text-secondary); flex: 1; }
+      .legend-pct { font-weight: 700; font-size: 0.75rem; }
+      .legend-val { font-size: 0.68rem; color: var(--text-secondary); margin-left: 4px; }
+
+      /* 3D Column effect container */
+      .col3d-wrap { position: relative; height: 200px; }
+
+      /* Bottom split */
+      .bottom-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; }
+      @media (max-width: 900px) { .bottom-row { grid-template-columns: 1fr; } }
+
+      /* Mini table */
+      .mini-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+      .mini-table thead th { background: rgba(0,0,0,0.3); color: var(--text-secondary); font-weight: 600; padding: 7px 10px; text-align: left; font-size: 0.67rem; letter-spacing: 0.06em; text-transform: uppercase; }
+      .mini-table tbody tr { border-bottom: 1px solid var(--border-color); transition: background 0.15s; }
+      .mini-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+      .mini-table tbody td { padding: 7px 10px; }
+      .mini-table .badge { padding: 2px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; white-space: nowrap; }
+
+      /* Status badges */
+      .s-done { background: rgba(74,222,128,0.15); color: #4ade80; }
+      .s-open { background: rgba(148,163,184,0.15); color: #94a3b8; }
+      .s-progress { background: rgba(56,189,248,0.15); color: #38bdf8; }
+      .s-waiting { background: rgba(251,191,36,0.15); color: #fbbf24; }
+      .s-overdue { background: rgba(248,113,113,0.15); color: #f87171; }
+      .s-aktif { background: rgba(74,222,128,0.15); color: #4ade80; }
+      .s-nonaktif { background: rgba(248,113,113,0.15); color: #f87171; }
+
+      /* Modal */
+      .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 1000; align-items: center; justify-content: center; }
+      .modal-overlay.active { display: flex; }
+      .modal-content { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 16px; width: 95%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+      .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border-color); }
+      .modal-header h2 { margin: 0; font-size: 1rem; }
+      .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 1.4rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; }
+      .modal-close:hover { background: rgba(255,255,255,0.1); color: white; }
+      .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+
+      /* Topbar info */
+      .dash-meta { display: flex; align-items: center; gap: 16px; font-size: 0.75rem; color: var(--text-secondary); }
+      .dash-meta span { display: flex; align-items: center; gap: 5px; }
+      .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; animation: pulse 1.5s infinite; }
+      @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+      .user-profile { display: flex; align-items: center; gap: 12px; }
+      .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
+      .btn-logout { padding: 6px 14px; border-radius: 6px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); cursor: pointer; font-size: 0.82rem; transition: all 0.2s; font-family: 'Outfit', sans-serif; }
+      .btn-logout:hover { background: rgba(255,255,255,0.08); color: white; }
+
+      /* Scroll bar */
+      .content-body::-webkit-scrollbar { width: 4px; }
+      .content-body::-webkit-scrollbar-track { background: transparent; }
+      .content-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+
+      /* Center text */
+      .chart-center-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: none; }
+      .chart-center-label .big { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+      .chart-center-label .small { font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; }
+
+      /* Progress bar */
+      .prog-bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+      .prog-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
     </style>
     <script src="/src/auth-guard.js"></script>
     <script src="/src/global-ui.js"></script>
-    <meta name="view-transition" content="same-origin">
   </head>
   <body>
     <div class="dashboard-layout">
@@ -104,65 +189,65 @@
           Maintain<span>X</span>
         </a>
         <nav class="nav-menu">
-        <a href="/dashboard.html" class="nav-item active">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-          Dashboard
-        </a>
-        <div class="nav-item-group" id="asset-nav-group">
-          <div class="nav-item-header" onclick="this.parentElement.classList.toggle('expanded')">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-            Asset Register
-            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <a href="/dashboard.html" class="nav-item active">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+            Dashboard
+          </a>
+          <div class="nav-item-group" id="asset-nav-group">
+            <div class="nav-item-header" onclick="this.parentElement.classList.toggle('expanded')">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+              Asset Register
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+            <div class="nav-submenu">
+              <a href="/asset-register.html" class="nav-item" style="height:36px;font-size:0.85rem">Data Asset</a>
+              <a href="/layout-area.html" class="nav-item" style="height:36px;font-size:0.85rem">Layout Area/Lokasi</a>
+              <a href="/detail-equipment.html" class="nav-item" style="height:36px;font-size:0.85rem">Detail Equipment</a>
+            </div>
           </div>
-          <div class="nav-submenu">
-            <a href="/asset-register.html" class="nav-item" style="height:36px;font-size:0.85rem">Data Asset</a>
-            <a href="/layout-area.html" class="nav-item" style="height:36px;font-size:0.85rem">Layout Area/Lokasi</a>
-            <a href="/detail-equipment.html" class="nav-item" style="height:36px;font-size:0.85rem">Detail Equipment</a>
+          <div class="nav-item-group" id="warehouse-nav-group">
+            <div class="nav-item-header" onclick="this.parentElement.classList.toggle('expanded')">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+              Warehouse &amp; Sparepart
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+            <div class="nav-submenu">
+              <a href="/warehouse.html" class="nav-item" style="height:36px;font-size:0.85rem">Dashboard Warehouse</a>
+              <a href="/data-barang.html" class="nav-item" style="height:36px;font-size:0.85rem">Data Barang</a>
+              <a href="/data-gudang.html" class="nav-item" style="height:36px;font-size:0.85rem">Data Gudang</a>
+              <a href="/transaksi-gudang.html" class="nav-item" style="height:36px;font-size:0.85rem">Transaksi Gudang</a>
+              <a href="/perkakas.html" class="nav-item" style="height:36px;font-size:0.85rem">Gudang Perkakas</a>
+              <a href="/data-alat.html" class="nav-item" style="height:36px;font-size:0.85rem">Data Alat (Perkakas)</a>
+              <a href="/logistic-request.html" class="nav-item" style="height:36px;font-size:0.85rem">Permintaan Logistik</a>
+            </div>
           </div>
-        </div>
-        <div class="nav-item-group" id="warehouse-nav-group">
-          <div class="nav-item-header" onclick="this.parentElement.classList.toggle('expanded')">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-            Warehouse &amp; Sparepart
-            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <div class="nav-item-group" id="maintenance-nav-group">
+            <div class="nav-item-header" onclick="this.parentElement.classList.toggle('expanded')">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              Maintenance Planning
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+            <div class="nav-submenu">
+              <a href="/maintenance-planning.html" class="nav-item" style="height:36px;font-size:0.85rem">Perencanaan Maintenance</a>
+              <a href="/maintenance-schedule.html" class="nav-item" style="height:36px;font-size:0.85rem">Jadwal Maintenance</a>
+              <a href="/list-task.html" class="nav-item" style="height:36px;font-size:0.85rem">Task List</a>
+              <a href="/report-task-list.html" class="nav-item" style="height:36px;font-size:0.85rem">Report Task List</a>
+              <a href="/work-order.html" class="nav-item" style="height:36px;font-size:0.85rem">Work Order</a>
+            </div>
           </div>
-          <div class="nav-submenu">
-            <a href="/warehouse.html" class="nav-item" style="height:36px;font-size:0.85rem">Dashboard Warehouse</a>
-            <a href="/data-barang.html" class="nav-item" style="height:36px;font-size:0.85rem">Data Barang</a>
-            <a href="/data-gudang.html" class="nav-item" style="height:36px;font-size:0.85rem">Data Gudang</a>
-            <a href="/transaksi-gudang.html" class="nav-item" style="height:36px;font-size:0.85rem">Transaksi Gudang</a>
-            <a href="/perkakas.html" class="nav-item" style="height:36px;font-size:0.85rem">Gudang Perkakas</a>
-            <a href="/data-alat.html" class="nav-item" style="height:36px;font-size:0.85rem">Data Alat (Perkakas)</a>
-            <a href="/logistic-request.html" class="nav-item" style="height:36px;font-size:0.85rem">Permintaan Logistik</a>
-          </div>
-        </div>
-        <div class="nav-item-group" id="maintenance-nav-group">
-          <div class="nav-item-header" onclick="this.parentElement.classList.toggle('expanded')">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            Maintenance Planning
-            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-          </div>
-          <div class="nav-submenu">
-            <a href="/maintenance-planning.html" class="nav-item" style="height:36px;font-size:0.85rem">Perencanaan Maintenance</a>
-            <a href="/maintenance-schedule.html" class="nav-item" style="height:36px;font-size:0.85rem">Jadwal Maintenance</a>
-            <a href="/list-task.html" class="nav-item" style="height:36px;font-size:0.85rem">Task List</a>
-            <a href="/report-task-list.html" class="nav-item" style="height:36px;font-size:0.85rem">Report Task List</a>
-            <a href="/work-order.html" class="nav-item" style="height:36px;font-size:0.85rem">Work Order</a>
-          </div>
-        </div>
-        <a href="/report.html" class="nav-item">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          Report
-        </a>
-        <a href="/pekerja.html" class="nav-item">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-          Pekerja
-        </a>
-        <a href="/settings.html" class="nav-item">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          Pengaturan
-        </a>
-</nav>
+          <a href="/report.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Report
+          </a>
+          <a href="/pekerja.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            Pekerja
+          </a>
+          <a href="/settings.html" class="nav-item">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            Pengaturan
+          </a>
+        </nav>
       </aside>
 
       <!-- Main Content -->
@@ -170,220 +255,621 @@
         <!-- Topbar -->
         <header class="topbar">
           <div>
-            <h1>Ringkasan Operasional</h1>
-            <p>Selamat datang kembali, Admin!</p>
+            <h1 style="font-size:1.1rem;margin:0;">Operational Command Center</h1>
+            <div class="dash-meta" style="margin-top:3px;">
+              <span><span class="live-dot"></span> Live Data</span>
+              <span id="topbar-time">–</span>
+              <span id="topbar-user-role" style="color:var(--neon-blue,#38bdf8);font-weight:600;"></span>
+            </div>
           </div>
-                    <div class="topbar-search" style="position: absolute; left: 50%; transform: translateX(-50%); z-index: 10;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary); pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" id="global-sidebar-search" placeholder="Cari menu sidebar..." style="padding: 8px 12px 8px 38px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.3); color: white; width: 300px; font-size: 0.9rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='var(--border-color)'">
+          <div class="topbar-search" style="position:absolute;left:50%;transform:translateX(-50%);z-index:10;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-secondary);pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="global-sidebar-search" placeholder="Cari menu..." style="padding:8px 12px 8px 34px;border-radius:8px;border:1px solid var(--border-color);background:rgba(0,0,0,0.3);color:white;width:260px;font-size:0.85rem;outline:none;font-family:'Outfit',sans-serif;" onfocus="this.style.borderColor='#38bdf8'" onblur="this.style.borderColor='var(--border-color)'">
           </div>
           <div class="user-profile">
-            <div class="avatar">A</div>
+            <div class="avatar" id="topbar-avatar">A</div>
             <div>
-              <div style="font-weight: 600;">Admin User</div>
-              <div style="font-size: 0.85rem; color: var(--text-secondary);">Administrator</div>
+              <div style="font-weight:600;font-size:0.9rem;" id="topbar-name">Admin User</div>
+              <div style="font-size:0.78rem;color:var(--text-secondary);" id="topbar-role">Administrator</div>
             </div>
             <button class="btn-logout" onclick="window.location.href='login.html'">Keluar</button>
           </div>
         </header>
 
         <div class="content-body">
-          <!-- Quick Stats Control -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h2 style="margin: 0; font-size: 1.2rem; color: var(--text-primary);">Statistik Utama</h2>
-          <select id="timeRangeToggle" class="modal-filter-select" onchange="updateChartsData()" style="padding: 6px 12px; border-radius: 6px; background: var(--glass-bg); color: var(--text-primary); border: 1px solid var(--border-color);">
-            <option value="mom">Bulan ke Bulan (MoM)</option>
-            <option value="yoy">Tahun ke Tahun (YoY)</option>
-          </select>
-        </div>
-        <!-- Quick Stats -->
-        <div class="dashboard-grid" id="quick-stats">
-          <!-- Card 1 -->
-          <div class="card glass-panel stat-card-clickable" onclick="openModal('Total Assets', 'assets')">
-            <div class="stat-header">
-              <div class="stat-icon" style="color: var(--accent-secondary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
-              <div style="font-size: 1.5rem; font-weight: 700;">248</div>
-            </div>
-            <div class="card-title" style="margin-bottom:0;">TOTAL ASSETS</div>
-            <div class="stat-chart-container"><canvas id="chartAssets"></canvas></div>
-          </div>
-          <!-- Card 2 -->
-          <div class="card glass-panel stat-card-clickable" onclick="openModal('WO Done', 'wodone')">
-            <div class="stat-header">
-              <div class="stat-icon" style="color: var(--status-success);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
-              <div style="font-size: 1.5rem; font-weight: 700;" id="statWODoneVal">124 <span style="font-size: 0.9rem; color: var(--status-success);" id="statWODonePerc">â–² 15%</span></div>
-            </div>
-            <div class="card-title" style="margin-bottom:0;">WO DONE</div>
-            <div class="stat-chart-container"><canvas id="chartWODone"></canvas></div>
-          </div>
-          <!-- Card 3 -->
-          <div class="card glass-panel stat-card-clickable" onclick="openModal('Overdue Preventive', 'overdue')">
-            <div class="stat-header">
-              <div class="stat-icon" style="color: var(--status-warning);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
-              <div style="font-size: 1.5rem; font-weight: 700;">8</div>
-            </div>
-            <div class="card-title" style="margin-bottom:0;">OVERDUE PREVENTIVE</div>
-            <div class="stat-chart-container"><canvas id="chartOverdue"></canvas></div>
-          </div>
-          <!-- Card 4 -->
-          <div class="card glass-panel stat-card-clickable critical-panel" onclick="openModal('WO Active', 'active')">
-            <div class="stat-header">
-              <div class="stat-icon" style="color: var(--status-error);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
-              <div style="font-size: 1.5rem; font-weight: 700;" id="statWOActiveVal">32 <span style="font-size: 0.9rem; color: var(--status-error);" id="statWOActivePerc">24%</span></div>
-            </div>
-            <div class="card-title" style="margin-bottom:0;">WO ACTIVE</div>
-            <div class="stat-chart-container"><canvas id="chartWOActive"></canvas></div>
-          </div>
-        </div>
 
+          <!-- ── SECTION: KPI ── -->
+          <div class="section-hdr"><span>📊 Key Performance Indicator</span></div>
+          <div class="kpi-grid" id="kpi-grid">
+            <!-- 8 cards injected by JS -->
+          </div>
 
-        <!-- Middle Layout: Calendar -->
-        <div class="card glass-panel" style="margin-bottom: 24px;">
-          <div class="calendar-header">
-            <h3 style="margin: 0;">MAINTENANCE SCHEDULE CALENDAR <span id="calendar-month-year" style="color: var(--accent-primary); margin-left: 8px;"></span></h3>
-            <div style="display: flex; gap: 12px; align-items: center;">
-              <select id="cal-month" class="modal-filter-select" onchange="changeCalendarMonth('filter')">
-                <option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option>
-                <option value="3">April</option><option value="4">Mei</option><option value="5">Juni</option>
-                <option value="6">Juli</option><option value="7" selected>Agustus</option><option value="8">September</option>
-                <option value="9">Oktober</option><option value="10">November</option><option value="11">Desember</option>
-              </select>
-              <select id="cal-year" class="modal-filter-select" onchange="changeCalendarMonth('filter')">
-                <option value="2025">2025</option>
-                <option value="2026" selected>2026</option>
-                <option value="2027">2027</option>
-              </select>
-              <div class="calendar-nav">
-                <button onclick="changeCalendarMonth('prev')">&lt;</button>
-                <button onclick="changeCalendarMonth('today')">Today</button>
-                <button onclick="changeCalendarMonth('next')">&gt;</button>
+          <!-- ── SECTION: MAINTENANCE CHARTS ── -->
+          <div class="section-hdr"><span>🔧 Maintenance Planning — Distribusi & Status</span></div>
+          <div class="chart-row">
+
+            <!-- Pie: Task Status Distribution -->
+            <div class="panel">
+              <div class="panel-hdr">
+                <span class="panel-title">Status Task — Persentase</span>
+                <span style="font-size:0.68rem;color:var(--text-secondary);">Maintenance Task List</span>
               </div>
-            </div>
-          </div>
-          <div class="calendar-grid">
-            <div class="calendar-day-name">Sen</div>
-            <div class="calendar-day-name">Sel</div>
-            <div class="calendar-day-name">Rab</div>
-            <div class="calendar-day-name">Kam</div>
-            <div class="calendar-day-name">Jum</div>
-            <div class="calendar-day-name">Sab</div>
-            <div class="calendar-day-name">Min</div>
-            <!-- Cells generated by JS -->
-          </div>
-        </div>
-
-        <!-- Bottom Layout: Split -->
-        <div class="dashboard-split">
-          <!-- Left: Table -->
-          <div class="card glass-panel" style="display: flex; flex-direction: column; height: 100%;">
-            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px;">
-              <h3 style="margin: 0;">RECENT COMPLETED WORK ORDERS</h3>
-              <div style="display: flex; gap: 8px; align-items: center;">
-                <label for="filter-start" style="font-size:0.85rem; color:var(--text-secondary);">Mulai:</label>
-                <input type="date" id="filter-start" class="modal-filter-select" />
-                <label for="filter-end" style="font-size:0.85rem; color:var(--text-secondary);">Selesai:</label>
-                <input type="date" id="filter-end" class="modal-filter-select" />
-                <button onclick="filterRecentWO()" style="padding: 6px 12px; border-radius: 6px; background: var(--accent-primary); color: white; border: none; cursor: pointer; font-weight: 500;">Filter</button>
-              </div>
-            </div>
-            <div class="table-responsive" style="flex: 1; min-height: 450px; overflow-y: auto;">
-              <table class="data-table" style="table-layout: fixed; width: 100%;">
-                <thead>
-                  <tr>
-                    <th>No</th>
-                    <th>ID Asset</th>
-                    <th>Equipment</th>
-                    <th>Lokasi Asset</th>
-                    <th>Description Task</th>
-                    <th>Technician</th>
-                    <th>Start Date</th>
-                    <th>Done Date</th>
-                  </tr>
-                </thead>
-                <tbody id="recent-wo-tbody">
-                  <!-- Generated by JS -->
-                </tbody>
-              </table>
-            </div>
-            
-            <!-- Pagination Controls -->
-            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: auto; padding-top: 16px;">
-              <span id="recent-wo-page-info" style="font-size: 0.9rem; color: var(--text-secondary);">Page 1 of 1</span>
-              <div style="display: flex; gap: 4px;">
-                <button onclick="changeRecentWOPage(-1)" style="padding: 6px 12px; border-radius: 6px; background: var(--bg-color); color: var(--text-primary); border: 1px solid var(--border-color); cursor: pointer;">&lt;</button>
-                <button onclick="changeRecentWOPage(1)" style="padding: 6px 12px; border-radius: 6px; background: var(--bg-color); color: var(--text-primary); border: 1px solid var(--border-color); cursor: pointer;">&gt;</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Right Column wrapper -->
-          <div style="display: flex; flex-direction: column; gap: 24px; height: 100%;">
-            
-            <!-- Right: Donut Chart -->
-            <div class="card glass-panel" style="flex: 1; display: flex; flex-direction: column;">
-              <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px;">
-                <h3 style="margin: 0;">WORK ORDER STATUS DISTRIBUTION</h3>
-                <div style="display: flex; gap: 8px;">
-                  <select id="donut-month" class="modal-filter-select" onchange="updateDonutChart()">
-                    <option value="7" selected>Agustus</option>
-                    <option value="8">September</option>
-                  </select>
-                  <select id="donut-year" class="modal-filter-select" onchange="updateDonutChart()">
-                    <option value="2026" selected>2026</option>
-                  </select>
+              <div style="display:flex;gap:16px;align-items:center;flex:1;min-height:180px;">
+                <div style="position:relative;width:160px;height:160px;flex-shrink:0;">
+                  <canvas id="pieTaskStatus"></canvas>
+                  <div class="chart-center-label">
+                    <div class="big" id="pie-task-center-val">–</div>
+                    <div class="small">Tasks</div>
+                  </div>
                 </div>
-              </div>
-              <div class="donut-container" style="flex: 1; min-height: 450px;">
-                <canvas id="donutChart"></canvas>
+                <div class="chart-legend" id="legend-task-status" style="flex:1;"></div>
               </div>
             </div>
-            
-            <!-- Right: Karyawan On-Site -->
-            <div class="card glass-panel" style="flex: 1; display: flex; flex-direction: column;">
-              <h3 style="margin-top: 0; margin-bottom: 16px;">MANPOWER</h3>
-              <div class="table-responsive" style="flex: 1; min-height: 450px; overflow-y: auto;">
-                <table class="data-table" style="margin: 0; table-layout: fixed; width: 100%;">
-                  <thead style="position: sticky; top: 0; background: var(--bg-surface); z-index: 10;">
+
+            <!-- Pie: Asset Status Distribution -->
+            <div class="panel">
+              <div class="panel-hdr">
+                <span class="panel-title">Status Asset — Persentase</span>
+                <span style="font-size:0.68rem;color:var(--text-secondary);">Asset Register</span>
+              </div>
+              <div style="display:flex;gap:16px;align-items:center;flex:1;min-height:180px;">
+                <div style="position:relative;width:160px;height:160px;flex-shrink:0;">
+                  <canvas id="pieAssetStatus"></canvas>
+                  <div class="chart-center-label">
+                    <div class="big" id="pie-asset-center-val">–</div>
+                    <div class="small">Assets</div>
+                  </div>
+                </div>
+                <div class="chart-legend" id="legend-asset-status" style="flex:1;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 3D Bar Charts Row ── -->
+          <div class="section-hdr"><span>📈 Perbandingan Modul — Column Chart</span></div>
+          <div class="chart-row-3">
+
+            <!-- 3D Bar: Maintenance Frequency -->
+            <div class="panel">
+              <div class="panel-hdr">
+                <span class="panel-title">Frekuensi Maintenance</span>
+                <span style="font-size:0.68rem;color:var(--text-secondary);">per Kategori</span>
+              </div>
+              <div class="col3d-wrap"><canvas id="barMaintenanceFreq"></canvas></div>
+              <div id="legend-freq" class="chart-legend" style="flex-direction:row;flex-wrap:wrap;gap:6px;"></div>
+            </div>
+
+            <!-- 3D Bar: Warehouse Stock -->
+            <div class="panel">
+              <div class="panel-hdr">
+                <span class="panel-title">Stok Gudang</span>
+                <span style="font-size:0.68rem;color:var(--text-secondary);">Kondisi Barang</span>
+              </div>
+              <div class="col3d-wrap"><canvas id="barWarehouse"></canvas></div>
+              <div id="legend-warehouse" class="chart-legend" style="flex-direction:row;flex-wrap:wrap;gap:6px;"></div>
+            </div>
+
+            <!-- 3D Bar: Pekerja Role -->
+            <div class="panel">
+              <div class="panel-hdr">
+                <span class="panel-title">Komposisi Pekerja</span>
+                <span style="font-size:0.68rem;color:var(--text-secondary);">per Profil Akun</span>
+              </div>
+              <div class="col3d-wrap"><canvas id="barPekerja"></canvas></div>
+              <div id="legend-pekerja" class="chart-legend" style="flex-direction:row;flex-wrap:wrap;gap:6px;"></div>
+            </div>
+
+          </div>
+
+          <!-- ── Pie: Warehouse Category + Logistic ── -->
+          <div class="chart-row">
+
+            <!-- Pie: Warehouse Category -->
+            <div class="panel">
+              <div class="panel-hdr">
+                <span class="panel-title">Kategori Barang Warehouse</span>
+                <span style="font-size:0.68rem;color:var(--text-secondary);">Warehouse & Sparepart</span>
+              </div>
+              <div style="display:flex;gap:16px;align-items:center;flex:1;min-height:180px;">
+                <div style="position:relative;width:160px;height:160px;flex-shrink:0;">
+                  <canvas id="pieWarehouseCat"></canvas>
+                  <div class="chart-center-label">
+                    <div class="big" id="pie-wh-center-val">–</div>
+                    <div class="small">Items</div>
+                  </div>
+                </div>
+                <div class="chart-legend" id="legend-wh-cat" style="flex:1;"></div>
+              </div>
+            </div>
+
+            <!-- Bar: Logistic Requests -->
+            <div class="panel">
+              <div class="panel-hdr">
+                <span class="panel-title">Permintaan Logistik</span>
+                <span style="font-size:0.68rem;color:var(--text-secondary);">Status Permintaan</span>
+              </div>
+              <div class="col3d-wrap" style="height:180px;"><canvas id="barLogistic"></canvas></div>
+              <div id="legend-logistic" class="chart-legend" style="flex-direction:row;flex-wrap:wrap;gap:6px;margin-top:4px;"></div>
+            </div>
+          </div>
+
+          <!-- ── BOTTOM: Recent Tasks + Pekerja ── -->
+          <div class="section-hdr"><span>📋 Aktivitas Terbaru</span></div>
+          <div class="bottom-row">
+
+            <!-- Recent Maintenance Tasks -->
+            <div class="panel" style="gap:8px;">
+              <div class="panel-hdr" style="margin-bottom:2px;">
+                <span class="panel-title">Task Maintenance Terbaru</span>
+                <a href="/report-task-list.html" style="font-size:0.68rem;color:var(--neon-blue,#38bdf8);text-decoration:none;">Lihat semua →</a>
+              </div>
+              <div style="overflow:auto;max-height:220px;">
+                <table class="mini-table">
+                  <thead>
                     <tr>
-                      <th style="width: 50px; text-align: center;">Status</th>
-                      <th>NIK</th>
-                      <th>Nama</th>
-                      <th>Jabatan</th>
+                      <th>Asset</th>
+                      <th>Task Description</th>
+                      <th>Tanggal</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
-                  <tbody id="employee-tbody">
-                    <!-- Populated by JS -->
-                  </tbody>
+                  <tbody id="recent-task-tbody"></tbody>
                 </table>
               </div>
             </div>
-            
+
+            <!-- Pekerja On-Site -->
+            <div class="panel" style="gap:8px;">
+              <div class="panel-hdr" style="margin-bottom:2px;">
+                <span class="panel-title">Daftar Pekerja</span>
+                <a href="/pekerja.html" style="font-size:0.68rem;color:var(--neon-blue,#38bdf8);text-decoration:none;">Kelola →</a>
+              </div>
+              <div style="overflow:auto;max-height:220px;">
+                <table class="mini-table">
+                  <thead>
+                    <tr>
+                      <th>Nama</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pekerja-tbody"></tbody>
+                </table>
+              </div>
+              <!-- Quick summary bar -->
+              <div id="pekerja-summary" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;"></div>
+            </div>
           </div>
-        
-        </div> <!-- End of content-body -->
+
+        </div><!-- end content-body -->
       </main>
     </div>
-    
-    <!-- Modal Popup Container -->
-    <div class="modal-overlay" id="detail-modal" onclick="closeModal(event)">
-      <div class="modal-content" style="max-width: 900px; width: 95%;">
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="detail-modal" onclick="if(event.target===this)closeModal()">
+      <div class="modal-content">
         <div class="modal-header">
-          <h2 id="modal-title" style="margin: 0;">Detail</h2>
-          <div style="display: flex; gap: 8px;" id="modal-filters-container">
-            <!-- Dynamic Filters inserted by JS -->
-          </div>
-          <button class="modal-close" onclick="closeModal(event, true)">&times;</button>
+          <h2 id="modal-title">Detail</h2>
+          <button class="modal-close" onclick="closeModal()">&times;</button>
         </div>
-        <div class="modal-body" id="modal-body-container" style="max-height: 60vh; overflow-y: auto;">
-          <p id="modal-desc" style="color: var(--text-secondary); line-height: 1.6;"></p>
-        </div>
+        <div class="modal-body" id="modal-body"></div>
       </div>
     </div>
-    
+
     <script type="module" src="/main.js"></script>
-    <script src="/dashboard.js"></script>
+    <script>
+    // ===================================================================
+    //  DASHBOARD.JS — Fully Integrated Technical Dashboard
+    // ===================================================================
+    Chart.register(ChartDataLabels);
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.font.family = 'Outfit';
+
+    // ── Colour Palette ──────────────────────────────────────────────────
+    const PAL = {
+      blue:   '#38bdf8',
+      teal:   '#2dd4bf',
+      orange: '#fb923c',
+      purple: '#a78bfa',
+      green:  '#4ade80',
+      red:    '#f87171',
+      yellow: '#fbbf24',
+      pink:   '#f472b6',
+      cyan:   '#67e8f9',
+      lime:   '#a3e635',
+    };
+    const alphaHex = (hex, a) => hex + Math.round(a*255).toString(16).padStart(2,'0');
+
+    // ── Read localStorage ───────────────────────────────────────────────
+    function ls(key, def) {
+      try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; }
+    }
+
+    const plans    = ls('mx_maintenance_plans', []);
+    const records  = ls('mx_task_records', {});
+    const assets   = ls('maintainx_assets', []);
+    const barang   = ls('mx_barang', []);
+    const gudang   = ls('mx_gudang', []);
+    const pekerja  = ls('mx_workers', []);
+    const logistic = ls('mx_logistic_requests', []);
+    const tools    = ls('mx_alat', []);
+
+    // ── Helper: compute task records stats ─────────────────────────────
+    function getTaskStats() {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const todayStr = fmt(today);
+      let open=0, onProgress=0, waiting=0, done=0, overdue=0;
+      // Count from records
+      const seen = new Set();
+      Object.entries(records).forEach(([key, rec]) => {
+        const st = rec.status || 'Open';
+        if (st === 'Done') done++;
+        else if (st === 'On Progress') onProgress++;
+        else if (st === 'Waiting on Part') waiting++;
+        else open++;
+        seen.add(key.split('_')[0]);
+      });
+      // Uncounted plans (Open by default, scheduled today)
+      plans.forEach(p => {
+        const key = `${p.id}_${todayStr}`;
+        if (!records[key]) {
+          open++;
+          // check overdue
+          const start = new Date(p.startDate); start.setHours(0,0,0,0);
+          if (today > start) overdue++;
+        } else {
+          const rec = records[key];
+          if (rec.status !== 'Done') {
+            const sched = new Date(rec.scheduledDate || p.startDate); sched.setHours(0,0,0,0);
+            if (today > sched) overdue++;
+          }
+        }
+      });
+      return { open, onProgress, waiting, done, overdue, total: open+onProgress+waiting+done };
+    }
+
+    function getAssetStats() {
+      const aktif = assets.filter(a => a.status === 'Aktif' || a.status === 'Active' || !a.status).length;
+      const tidakAktif = assets.filter(a => a.status === 'Tidak Aktif' || a.status === 'Inactive').length;
+      const total = assets.length;
+      const withMaintenance = [...new Set(plans.map(p => p.assetId))].length;
+      return { aktif: aktif || total, tidakAktif, total, withMaintenance };
+    }
+
+    function getWarehouseStats() {
+      const total = barang.length;
+      const lowStock = barang.filter(b => b.stok !== undefined && b.stokMin !== undefined && b.stok <= b.stokMin).length;
+      const outOfStock = barang.filter(b => (b.stok || 0) === 0).length;
+      const categories = {};
+      barang.forEach(b => { const cat = b.kategori || b.category || 'Lainnya'; categories[cat] = (categories[cat]||0)+1; });
+      return { total, lowStock, outOfStock, categories };
+    }
+
+    function getPekerjaStats() {
+      const roles = {};
+      pekerja.forEach(p => { const r = p.profilAkun || p.role || 'Lainnya'; roles[r]=(roles[r]||0)+1; });
+      const active = pekerja.filter(p => p.status === 'Aktif' || !p.status).length;
+      return { total: pekerja.length, active, roles };
+    }
+
+    function getLogisticStats() {
+      const pending   = logistic.filter(l => l.status === 'Pending' || l.status === 'Menunggu').length;
+      const approved  = logistic.filter(l => l.status === 'Approved' || l.status === 'Disetujui').length;
+      const rejected  = logistic.filter(l => l.status === 'Rejected' || l.status === 'Ditolak').length;
+      const fulfilled = logistic.filter(l => l.status === 'Fulfilled' || l.status === 'Selesai').length;
+      return { total: logistic.length, pending, approved, rejected, fulfilled };
+    }
+
+    function getFrequencyStats() {
+      const freq = {};
+      plans.forEach(p => { freq[p.frequency]=(freq[p.frequency]||0)+1; });
+      return freq;
+    }
+
+    // Gather all data
+    const taskStats  = getTaskStats();
+    const assetStats = getAssetStats();
+    const whStats    = getWarehouseStats();
+    const pkStats    = getPekerjaStats();
+    const lgStats    = getLogisticStats();
+    const freqStats  = getFrequencyStats();
+
+    // ── Topbar Clock ───────────────────────────────────────────────────
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('topbar-time').textContent = now.toLocaleString('id-ID', { weekday:'short', day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    }
+    updateClock(); setInterval(updateClock, 30000);
+
+    // Topbar user from localStorage session
+    try {
+      const session = JSON.parse(localStorage.getItem('mx_session') || localStorage.getItem('maintainx_session') || '{}');
+      if (session.name) {
+        document.getElementById('topbar-name').textContent = session.name;
+        document.getElementById('topbar-role').textContent = session.role || 'User';
+        document.getElementById('topbar-avatar').textContent = session.name[0].toUpperCase();
+        document.getElementById('topbar-user-role').textContent = session.role || '';
+      }
+    } catch {}
+
+    // ── KPI Cards ──────────────────────────────────────────────────────
+    const kpiDefs = [
+      { label:'Total Asset', value: assetStats.total || plans.length || '–', sub:`${assetStats.aktif} Aktif · ${assetStats.tidakAktif} Non-Aktif`, badge:'', color:'blue', icon:'⚙️', link:'/asset-register.html' },
+      { label:'Task Done',   value: taskStats.done,   sub:'Selesai dikerjakan',       badge:`${taskStats.total ? Math.round(taskStats.done/taskStats.total*100) : 0}%`, badgeClass:'badge-up', color:'teal', icon:'✅', link:'/report-task-list.html' },
+      { label:'On Progress', value: taskStats.onProgress, sub:'Sedang dikerjakan',   badge:'', color:'purple', icon:'🔄', link:'/list-task.html' },
+      { label:'Overdue',     value: taskStats.overdue, sub:'Melewati jadwal',         badge: taskStats.overdue > 0 ? '!' : '✓', badgeClass: taskStats.overdue > 0 ? 'badge-down' : 'badge-up', color: taskStats.overdue > 0 ? 'red' : 'green', icon:'⚠️', link:'/list-task.html' },
+      { label:'Stok Barang', value: whStats.total,    sub:`${whStats.lowStock} Low · ${whStats.outOfStock} Habis`, badge: whStats.outOfStock > 0 ? `${whStats.outOfStock} Habis` : 'OK', badgeClass: whStats.outOfStock > 0 ? 'badge-warn' : 'badge-up', color:'orange', icon:'📦', link:'/data-barang.html' },
+      { label:'Perencanaan', value: plans.length,     sub:'Task Description aktif',   badge:'', color:'blue', icon:'📋', link:'/maintenance-planning.html' },
+      { label:'Pekerja',     value: pkStats.total,    sub:`${pkStats.active} Aktif`,  badge:'', color:'teal', icon:'👷', link:'/pekerja.html' },
+      { label:'Logistik',    value: lgStats.total,    sub:`${lgStats.pending} Pending · ${lgStats.fulfilled} Selesai`, badge: lgStats.pending > 0 ? `${lgStats.pending}` : '', badgeClass:'badge-warn', color:'orange', icon:'🚚', link:'/logistic-request.html' },
+    ];
+
+    const kpiGrid = document.getElementById('kpi-grid');
+    kpiDefs.forEach(k => {
+      const card = document.createElement('div');
+      card.className = `kpi-card ${k.color}`;
+      card.onclick = () => window.location.href = k.link;
+      card.innerHTML = `
+        <div class="kpi-top">
+          <span class="kpi-label">${k.icon} ${k.label}</span>
+          ${k.badge ? `<span class="kpi-badge ${k.badgeClass||''}">${k.badge}</span>` : ''}
+        </div>
+        <div class="kpi-value">${k.value}</div>
+        <div class="kpi-sub">${k.sub}</div>
+      `;
+      kpiGrid.appendChild(card);
+    });
+
+    // ── Helper: render pie chart + legend ──────────────────────────────
+    function renderPieChart(canvasId, legendId, centerValId, labels, values, colors) {
+      const total = values.reduce((a,b) => a+b, 0);
+      if (centerValId) document.getElementById(centerValId).textContent = total;
+
+      const backgroundColors = colors.map(c => alphaHex(c, 0.85));
+      const borderColors = colors;
+
+      new Chart(document.getElementById(canvasId), {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{ data: values, backgroundColor: backgroundColors, borderColor: borderColors, borderWidth: 1.5, hoverOffset: 6 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '68%',
+          plugins: {
+            legend: { display: false },
+            datalabels: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const v = ctx.raw;
+                  const pct = total > 0 ? ((v/total)*100).toFixed(1) : 0;
+                  return ` ${ctx.label}: ${v} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const legendEl = document.getElementById(legendId);
+      labels.forEach((lbl, i) => {
+        const pct = total > 0 ? ((values[i]/total)*100).toFixed(1) : '0.0';
+        const item = document.createElement('div');
+        item.className = 'legend-item';
+        item.innerHTML = `
+          <span class="legend-dot" style="background:${colors[i]};"></span>
+          <span class="legend-label">${lbl}</span>
+          <span class="legend-pct" style="color:${colors[i]};">${pct}%</span>
+          <span class="legend-val">(${values[i]})</span>
+        `;
+        legendEl.appendChild(item);
+        // progress bar
+        const bar = document.createElement('div');
+        bar.className = 'prog-bar';
+        bar.style.marginLeft = '17px';
+        bar.innerHTML = `<div class="prog-fill" style="width:${pct}%;background:${colors[i]};"></div>`;
+        legendEl.appendChild(bar);
+      });
+    }
+
+    // ── Pie 1: Task Status ──────────────────────────────────────────────
+    const taskLabels = ['Open','On Progress','Waiting on Part','Done'];
+    const taskValues = [taskStats.open, taskStats.onProgress, taskStats.waiting, taskStats.done];
+    const taskColors = [PAL.blue, PAL.purple, PAL.yellow, PAL.green];
+    renderPieChart('pieTaskStatus','legend-task-status','pie-task-center-val', taskLabels, taskValues, taskColors);
+
+    // ── Pie 2: Asset Status ─────────────────────────────────────────────
+    const assetTotal = assetStats.total || 5; // fallback default assets
+    const assetAktif = assetStats.aktif || 3;
+    const assetTidakAktif = assetStats.tidakAktif || 2;
+    renderPieChart('pieAssetStatus','legend-asset-status','pie-asset-center-val',
+      ['Aktif','Tidak Aktif'],
+      [assetAktif, assetTidakAktif],
+      [PAL.green, PAL.red]
+    );
+
+    // ── Helper: 3D Column Bar Chart ────────────────────────────────────
+    function render3DBar(canvasId, legendId, labels, values, colors, xLabel) {
+      // Simulate 3D by overlaying shadow bars
+      const shadowDatasets = labels.map((_, i) => ({
+        label: `_shadow_${i}`,
+        data: labels.map((__, j) => j === i ? values[i] * 0.85 : 0),
+        backgroundColor: alphaHex(colors[i], 0.25),
+        borderWidth: 0,
+        barPercentage: 0.75,
+        categoryPercentage: 0.85,
+        borderRadius: 4,
+        stack: `s${i}`,
+      }));
+
+      const mainDatasets = labels.map((lbl, i) => ({
+        label: lbl,
+        data: labels.map((__, j) => j === i ? values[i] : 0),
+        backgroundColor: alphaHex(colors[i], 0.88),
+        borderColor: colors[i],
+        borderWidth: 1,
+        barPercentage: 0.65,
+        categoryPercentage: 0.85,
+        borderRadius: { topLeft: 5, topRight: 5 },
+        stack: `s${i}`,
+      }));
+
+      const total = values.reduce((a,b) => a+b, 0);
+
+      new Chart(document.getElementById(canvasId), {
+        type: 'bar',
+        data: { labels, datasets: [...shadowDatasets, ...mainDatasets] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end', align: 'top',
+              formatter: (val, ctx) => {
+                if (ctx.dataset.label?.startsWith('_shadow_')) return '';
+                if (!val) return '';
+                const pct = total > 0 ? `${((val/total)*100).toFixed(0)}%` : '';
+                return `${val}\n${pct}`;
+              },
+              color: '#e2e8f0',
+              font: { size: 9, weight: '600', family: 'Outfit' },
+              offset: 2,
+            },
+            tooltip: {
+              filter: item => !item.dataset.label?.startsWith('_shadow_'),
+              callbacks: {
+                label: ctx => {
+                  const pct = total > 0 ? ((ctx.raw/total)*100).toFixed(1) : 0;
+                  return ` ${ctx.dataset.label}: ${ctx.raw} (${pct}%)`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 30 } },
+            y: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font: { size: 9 } }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Legend
+      if (legendId) {
+        const el = document.getElementById(legendId);
+        labels.forEach((lbl, i) => {
+          const pct = total > 0 ? ((values[i]/total)*100).toFixed(0) : 0;
+          el.innerHTML += `<span class="legend-item" style="gap:4px;"><span class="legend-dot" style="background:${colors[i]};"></span><span style="font-size:0.65rem;color:var(--text-secondary);">${lbl} <b style="color:${colors[i]};">${pct}%</b></span></span>`;
+        });
+      }
+    }
+
+    // ── 3D Bar: Maintenance Frequency ──────────────────────────────────
+    const freqLabels = Object.keys(freqStats).length > 0 ? Object.keys(freqStats) : ['Monthly','Annual','Weekly','Daily','Quarterly','Semester'];
+    const freqValues = Object.keys(freqStats).length > 0 ? Object.values(freqStats) : [3,2,1,1,1,1];
+    const freqColors = [PAL.blue, PAL.teal, PAL.orange, PAL.red, PAL.purple, PAL.cyan, PAL.yellow, PAL.green];
+    render3DBar('barMaintenanceFreq','legend-freq', freqLabels, freqValues, freqColors.slice(0, freqLabels.length));
+
+    // ── 3D Bar: Warehouse ───────────────────────────────────────────────
+    const whLabels = ['Total', 'Aman', 'Low Stock', 'Habis'];
+    const whValues = [whStats.total||12, (whStats.total||12)-(whStats.lowStock||2)-(whStats.outOfStock||1), whStats.lowStock||2, whStats.outOfStock||1];
+    const whColors = [PAL.blue, PAL.green, PAL.yellow, PAL.red];
+    render3DBar('barWarehouse','legend-warehouse', whLabels, whValues, whColors);
+
+    // ── 3D Bar: Pekerja ─────────────────────────────────────────────────
+    const pkRoles = Object.keys(pkStats.roles).length > 0 ? pkStats.roles : { Administrator: 1, Supervisor: 2, Teknisi: 5, 'Staff Gudang': 2 };
+    const pkLabels = Object.keys(pkRoles);
+    const pkValues = Object.values(pkRoles);
+    const pkColors = [PAL.blue, PAL.teal, PAL.orange, PAL.purple, PAL.green, PAL.cyan];
+    render3DBar('barPekerja','legend-pekerja', pkLabels, pkValues, pkColors.slice(0, pkLabels.length));
+
+    // ── Pie 3: Warehouse Category ────────────────────────────────────────
+    const whCats = Object.keys(whStats.categories).length > 0
+      ? whStats.categories
+      : { Pelumas: 4, Filter: 3, 'Seal & Gasket': 2, Elektrikal: 3, Lainnya: 2 };
+    const whCatLabels = Object.keys(whCats);
+    const whCatValues = Object.values(whCats);
+    const catColors = [PAL.blue, PAL.teal, PAL.orange, PAL.purple, PAL.green, PAL.yellow, PAL.red, PAL.cyan];
+    renderPieChart('pieWarehouseCat','legend-wh-cat','pie-wh-center-val', whCatLabels, whCatValues, catColors.slice(0, whCatLabels.length));
+
+    // ── 3D Bar: Logistic ─────────────────────────────────────────────────
+    const lgLabels = ['Pending','Approved','Rejected','Fulfilled'];
+    const lgValues = [lgStats.pending||2, lgStats.approved||3, lgStats.rejected||1, lgStats.fulfilled||4];
+    const lgColors = [PAL.yellow, PAL.teal, PAL.red, PAL.green];
+    render3DBar('barLogistic','legend-logistic', lgLabels, lgValues, lgColors);
+
+    // ── Recent Task Table ───────────────────────────────────────────────
+    function renderRecentTasks() {
+      const tbody = document.getElementById('recent-task-tbody');
+      // Gather from task records, sorted by doneAt or scheduledDate
+      const entries = Object.entries(records)
+        .map(([key, rec]) => {
+          const planId = key.split('_')[0];
+          const plan = plans.find(p => p.id === planId) || {};
+          return { ...rec, planId, plan, key };
+        })
+        .sort((a,b) => new Date(b.doneAt || b.scheduledDate || 0) - new Date(a.doneAt || a.scheduledDate || 0))
+        .slice(0, 8);
+
+      if (entries.length === 0) {
+        // Show sample from plans
+        const sample = plans.slice(0,5);
+        tbody.innerHTML = sample.map(p => `
+          <tr>
+            <td style="font-weight:600;">${p.assetName||'-'}</td>
+            <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.taskDescription}">${p.taskDescription||'-'}</td>
+            <td style="font-size:0.7rem;color:var(--text-secondary);">${p.startDate||'-'}</td>
+            <td><span class="badge s-open">Open</span></td>
+          </tr>
+        `).join('');
+        return;
+      }
+
+      tbody.innerHTML = entries.map(e => {
+        const st = e.status || 'Open';
+        const cls = st==='Done'?'s-done':st==='On Progress'?'s-progress':st==='Waiting on Part'?'s-waiting':'s-open';
+        const date = (e.doneAt||e.scheduledDate||'').slice(0,10);
+        return `<tr>
+          <td style="font-weight:600;">${e.plan.assetName||'-'}</td>
+          <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.plan.taskDescription||''}">${e.plan.taskDescription||'-'}</td>
+          <td style="font-size:0.7rem;color:var(--text-secondary);">${date||'-'}</td>
+          <td><span class="badge ${cls}">${st}</span></td>
+        </tr>`;
+      }).join('');
+    }
+    renderRecentTasks();
+
+    // ── Pekerja Table ────────────────────────────────────────────────────
+    function renderPekerja() {
+      const tbody = document.getElementById('pekerja-tbody');
+      const sample = pekerja.length > 0 ? pekerja.slice(0,8) : [
+        { nama:'Budi Santoso', profilAkun:'Teknisi', status:'Aktif' },
+        { nama:'Agus Setiawan', profilAkun:'Supervisor', status:'Aktif' },
+        { nama:'Joko Widodo', profilAkun:'Teknisi', status:'Aktif' },
+      ];
+      tbody.innerHTML = sample.map(p => {
+        const st = p.status || 'Aktif';
+        const cl = st === 'Aktif' ? 's-aktif' : 's-nonaktif';
+        return `<tr>
+          <td style="font-weight:600;">${p.nama||p.name||'-'}</td>
+          <td style="font-size:0.72rem;color:var(--text-secondary);">${p.profilAkun||p.role||'-'}</td>
+          <td><span class="badge ${cl}">${st}</span></td>
+        </tr>`;
+      }).join('');
+
+      // Summary chips
+      const roles = pkStats.roles;
+      const summaryEl = document.getElementById('pekerja-summary');
+      Object.entries(roles).forEach(([r,c]) => {
+        summaryEl.innerHTML += `<span class="kpi-badge" style="background:rgba(56,189,248,0.12);color:#38bdf8;padding:3px 9px;">${r}: ${c}</span>`;
+      });
+    }
+    renderPekerja();
+
+    // ── Modal ────────────────────────────────────────────────────────────
+    window.closeModal = function() {
+      document.getElementById('detail-modal').classList.remove('active');
+    };
+    </script>
   </body>
 </html>
-
-
-

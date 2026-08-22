@@ -133,8 +133,12 @@ function MaintenanceSchedule() {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const reload = () => {
-    const p = loadPlans();
-    setPlans(p.length ? p : getDefaults());
+    const saved = localStorage.getItem("mx_maintenance_plans");
+    if (saved === null) {
+      setPlans(getDefaults());
+    } else {
+      setPlans(loadPlans());
+    }
     setRecords(loadRecords());
     const w = JSON.parse(localStorage.getItem("mx_workers") || "[]");
     setWorkers(w);

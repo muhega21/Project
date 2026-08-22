@@ -184,6 +184,19 @@ function MaintenanceSchedule() {
     setRecords(loadRecords());
   };
 
+  const deletePlan = (plan) => {
+    const targetDateStr = getTargetDateStr();
+    const ts = getTaskStatus(plan.id, targetDateStr);
+    if (ts === "Done") {
+      alert("Task yang sudah selesai (Done) tidak dapat dihapus.");
+      return;
+    }
+    if (!confirm(`Hapus task "${plan.taskDescription}" untuk ${plan.assetName}?\n\nTask ini juga akan hilang dari Perencanaan Maintenance.`)) return;
+    const updated = plans.filter(p => p.id !== plan.id);
+    savePlans(updated);
+    setPlans(updated);
+  };
+
   const isScheduledOnDate = (startDateStr, frequency, targetDateStr) => {
     if (!startDateStr || !targetDateStr) return false;
     const start = new Date(startDateStr); start.setHours(0,0,0,0);
@@ -293,11 +306,12 @@ function MaintenanceSchedule() {
                   <th className="px-4 py-3 font-medium">Tgl. Jadwal</th>
                   <th className="px-4 py-3 font-medium">PIC (Multi)</th>
                   <th className="px-4 py-3 font-medium">Status Task</th>
+                  <th className="px-4 py-3 font-medium text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-color">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan="8" className="px-6 py-12 text-center text-text-secondary">Tidak ada jadwal yang ditemukan.</td></tr>
+                  <tr><td colSpan="9" className="px-6 py-12 text-center text-text-secondary">Tidak ada jadwal yang ditemukan.</td></tr>
                 ) : filtered.map(plan => {
                   const targetDateStr = getTargetDateStr();
                   const ts = getTaskStatus(plan.id, targetDateStr);
@@ -327,6 +341,19 @@ function MaintenanceSchedule() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${TASK_STATUS_COLORS[ts]||TASK_STATUS_COLORS["Open"]}`}>{ts}</span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {ts === "Done" ? (
+                          <span className="text-gray-600 text-xs italic">Terkunci</span>
+                        ) : (
+                          <button
+                            onClick={() => deletePlan(plan)}
+                            title="Hapus Task Description"
+                            className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/30 hover:text-red-300 border border-red-500/20 hover:border-red-500/50 transition-all"
+                          >
+                            <Trash2 size={14}/>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

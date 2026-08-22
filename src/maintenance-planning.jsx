@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  Plus, X, Search, ChevronDown, ClipboardList, Trash2, Edit2, Check, Save
+  Plus, X, Search, ChevronDown, ClipboardList, Trash2, Edit2, Check, Save, CalendarRange, ExternalLink, ArrowRight
 } from 'lucide-react';
 
 const FREQUENCY_OPTIONS = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semester', 'Annual', 'Trienial', 'Quinquenial'];
@@ -235,6 +235,12 @@ function MaintenancePlanning() {
               className="w-full bg-bg-dark border border-border-color rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-[#FF7043]"
             />
           </div>
+          <button
+            onClick={() => window.location.href = '/maintenance-schedule.html'}
+            className="flex items-center gap-2 bg-bg-dark border border-border-color hover:border-[#FF7043] hover:text-white text-text-secondary px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap"
+          >
+            <CalendarRange size={16}/> Jadwal Maintenance
+          </button>
           <button onClick={handleOpenAdd}
             className="bg-gradient-to-r from-accent to-accent-secondary hover:from-[#FF8A65] hover:to-[#FF5722] text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-lg transition-all active:scale-95 whitespace-nowrap">
             <Plus size={18} /> Tambah Task Description
@@ -255,6 +261,17 @@ function MaintenancePlanning() {
             <div className={`text-3xl font-bold mt-1 ${card.color}`}>{card.value}</div>
           </div>
         ))}
+      </div>
+
+      {/* Integration Info Banner */}
+      <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-xl px-4 py-2.5 text-xs text-blue-300">
+        <CalendarRange size={15} className="shrink-0"/>
+        <span>
+          Task Description yang dibuat di sini akan otomatis tampil di <strong className="text-blue-200">Jadwal Maintenance</strong> sesuai Frequency dan Start Date yang diatur.
+        </span>
+        <button onClick={() => window.location.href = '/maintenance-schedule.html'} className="ml-auto flex items-center gap-1.5 text-blue-200 hover:text-white font-semibold shrink-0 transition-colors">
+          Buka Jadwal <ArrowRight size={13}/>
+        </button>
       </div>
 
       {/* Legend */}
@@ -415,6 +432,12 @@ function MaintenancePlanning() {
                   📅 Next Date: <strong>{computeNextDate(detailForm.startDate, detailForm.frequency)}</strong>
                 </div>
               )}
+
+              {/* Integration note */}
+              <div className="text-xs bg-green-500/10 border border-green-500/30 rounded-lg p-2.5 text-green-300 flex items-center gap-2">
+                <CalendarRange size={13} className="shrink-0"/>
+                <span>Task ini aktif di <strong>Jadwal Maintenance</strong> sesuai frekuensi yang diatur.</span>
+              </div>
             </div>
 
             {/* Panel Footer Actions */}

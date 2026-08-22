@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { Calendar, AlertTriangle, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, X, ChevronDown, Plus, HelpCircle, Trash2, ClipboardList, CalendarDays } from "lucide-react";
+import { Calendar, AlertTriangle, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, X, ChevronDown, Plus, HelpCircle, Trash2, ClipboardList, CalendarDays, ExternalLink } from "lucide-react";
 import { loadPlans, savePlans, loadRecords, normalizePic, updateRecord } from "./maintenance-store.js";
 
 const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -141,10 +141,12 @@ function MaintenanceSchedule() {
   };
 
   const getDefaults = () => {
+    // Default plans HARUS sama persis dengan INITIAL_PLANS di maintenance-planning.jsx
+    // agar data Perencanaan Maintenance → Jadwal Maintenance terhubung.
     const defaults = [
-      { id:"MP-001", areaId:"AREA-01", areaName:"Lantai Produksi", assetId:"EQ-1001", assetName:"Pompa Distribusi", taskDescription:"Pemeriksaan pelumasan dan kebocoran", frequency:"Monthly", startDate:"2026-08-01", nextDate:"2026-09-01", pic:[], status:"Active" },
-      { id:"MP-002", areaId:"AREA-02", areaName:"Ruang Boiler", assetId:"EQ-1005", assetName:"Boiler Utama", taskDescription:"Pengecekan tekanan dan overhaul tahunan", frequency:"Annual", startDate:"2026-01-15", nextDate:"2027-01-15", pic:[], status:"Active" },
-      { id:"MP-003", areaId:"AREA-01", areaName:"Lantai Produksi", assetId:"EQ-1010", assetName:"Filter RO", taskDescription:"Penggantian membran filter", frequency:"Weekly", startDate:"2026-08-04", nextDate:"2026-08-11", pic:[], status:"Active" },
+      { id:'P-00001', taskType:'Preventive', plantCode:'AREA-01', areaId:'AREA-01', areaName:'Lantai Produksi',  assetId:'EQ-1001', assetName:'Pompa Distribusi', taskDescription:'Pemeriksaan pelumasan dan kebocoran', frequency:'Monthly', startDate:'2026-08-01', nextDate:'2026-09-01', pic:[], status:'Active' },
+      { id:'P-00002', taskType:'Preventive', plantCode:'AREA-02', areaId:'AREA-02', areaName:'Ruang Boiler',     assetId:'EQ-1005', assetName:'Boiler Utama',      taskDescription:'Pengecekan tekanan dan overhaul tahunan', frequency:'Annual', startDate:'2026-01-15', nextDate:'2027-01-15', pic:[], status:'Active' },
+      { id:'C-00003', taskType:'Corrective', plantCode:'AREA-01', areaId:'AREA-01', areaName:'Lantai Produksi',  assetId:'EQ-1010', assetName:'Filter RO',          taskDescription:'Penggantian membran filter akibat penyumbatan', frequency:'Weekly', startDate:'2026-08-04', nextDate:'2026-08-11', pic:[], status:'Active' },
     ];
     savePlans(defaults);
     return defaults;
@@ -263,9 +265,15 @@ function MaintenanceSchedule() {
             <button onClick={() => setViewMode("table")} className={`px-3 py-2 text-sm transition-colors ${viewMode==="table"?"bg-[#FF7043] text-white":"bg-bg-dark text-text-secondary hover:bg-btn-secondary"}`}>Tabel</button>
             <button onClick={() => setViewMode("calendar")} className={`px-3 py-2 text-sm transition-colors ${viewMode==="calendar"?"bg-[#FF7043] text-white":"bg-bg-dark text-text-secondary hover:bg-btn-secondary"}`}>Kalender</button>
           </div>
-          <button onClick={() => window.location.href='/list-task.html'} className="ml-auto flex items-center gap-2 px-3 py-2 text-sm transition-colors bg-[#FF7043] text-white rounded-lg hover:bg-orange-600 shrink-0 shadow">
-            <ClipboardList size={16}/> Task Belum Selesai
-          </button>
+          {/* Navigation buttons */}
+          <div className="flex gap-2 ml-auto">
+            <button onClick={() => window.location.href='/maintenance-planning.html'} className="flex items-center gap-2 px-3 py-2 text-sm transition-colors bg-bg-dark border border-border-color text-text-secondary rounded-lg hover:border-[#FF7043] hover:text-white shrink-0">
+              <ExternalLink size={14}/> Perencanaan
+            </button>
+            <button onClick={() => window.location.href='/list-task.html'} className="flex items-center gap-2 px-3 py-2 text-sm transition-colors bg-[#FF7043] text-white rounded-lg hover:bg-orange-600 shrink-0 shadow">
+              <ClipboardList size={16}/> Task Belum Selesai
+            </button>
+          </div>
         </div>
       </div>
 

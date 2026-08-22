@@ -121,6 +121,44 @@ function PicTagInput({ value, onChange, workers, disabled }) {
   );
 }
 
+/* ── In-App Toast ───────────────────────────────────────────────── */
+function Toast({ toasts }) {
+  return (
+    <div className="fixed top-5 right-5 z-[200] flex flex-col gap-2 pointer-events-none">
+      {toasts.map(t => (
+        <div key={t.id} className={`flex items-center gap-2 px-4 py-3 rounded-xl border shadow-2xl text-sm font-medium pointer-events-auto
+          ${t.type === 'success' ? 'bg-green-900/90 border-green-500/40 text-green-200' :
+            t.type === 'error'   ? 'bg-red-900/90 border-red-500/40 text-red-200' :
+            'bg-bg-surface border-border-color text-text-primary'}`}>
+          {t.type === 'success' ? <CheckCircle size={15}/> : <AlertTriangle size={15}/>}
+          {t.message}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Confirm Modal ───────────────────────────────────────────────── */
+function ConfirmModal({ message, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-[#1A2028] border border-border-color rounded-2xl w-full max-w-sm shadow-2xl">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-border-color">
+          <AlertTriangle size={20} className="text-red-400 shrink-0"/>
+          <h3 className="text-base font-bold text-white">Konfirmasi Hapus</h3>
+        </div>
+        <div className="px-6 py-4 text-sm text-text-secondary">{message}</div>
+        <div className="flex gap-3 px-6 py-4 border-t border-border-color justify-end">
+          <button onClick={onCancel} className="px-4 py-2 bg-btn-secondary hover:bg-gray-700 text-white rounded-lg border border-border-color transition-colors text-sm font-medium">Batal</button>
+          <button onClick={onConfirm} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-1.5">
+            <Trash2 size={14}/> Ya, Hapus
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Component ─────────────────────────────────────────────── */
 function MaintenanceSchedule() {
   const [plans, setPlans] = useState([]);
@@ -131,6 +169,14 @@ function MaintenanceSchedule() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("table");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [toasts, setToasts] = useState([]);
+  const [confirmModal, setConfirmModal] = useState(null);
+
+  const addToast = (message, type = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+  };
 
   const reload = () => {
     const saved = localStorage.getItem("mx_maintenance_plans");
@@ -192,13 +238,19 @@ function MaintenanceSchedule() {
     const targetDateStr = getTargetDateStr();
     const ts = getTaskStatus(plan.id, targetDateStr);
     if (ts === "Done") {
-      alert("Task yang sudah selesai (Done) tidak dapat dihapus.");
+      addToast("Task yang sudah selesai (Done) tidak dapat dihapus.", "error");
       return;
     }
-    if (!confirm(`Hapus task "${plan.taskDescription}" untuk ${plan.assetName}?\n\nTask ini juga akan hilang dari Perencanaan Maintenance.`)) return;
-    const updated = plans.filter(p => p.id !== plan.id);
-    savePlans(updated);
-    setPlans(updated);
+    setConfirmModal({
+      message: `Hapus task "${plan.taskDescription}" untuk ${plan.assetName}? Task ini juga akan hilang dari Perencanaan Maintenance.`,
+      onConfirm: () => {
+        const updated = plans.filter(p => p.id !== plan.id);
+        savePlans(updated);
+        setPlans(updated);
+        setConfirmModal(null);
+        addToast("Task berhasil dihapus.", "success");
+      }
+    });
   };
 
   const isScheduledOnDate = (startDateStr, frequency, targetDateStr) => {
@@ -220,8 +272,12 @@ function MaintenanceSchedule() {
     }
   };
 
-  const isOverdue = (nd, ts) => nd && new Date(nd) < new Date(new Date().toDateString()) && ts !== "Done";
-  const isDueThisWeek = (nd) => { if (!nd) return false; const n=new Date(nd),t=new Date(),w=new Date(); w.setDate(t.getDate()+7); return n>=t&&n<=w; };
+  const isOverdue = (targetDateStr, ts) => {
+    if (!targetDateStr || ts === "Done") return false;
+    const target = new Date(targetDateStr); target.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
+    return target < today;
+  };
 
   const filtered = plans.filter(p => {
     const matchSearch = !searchQuery || p.assetName.toLowerCase().includes(searchQuery.toLowerCase()) || p.areaName.toLowerCase().includes(searchQuery.toLowerCase()) || p.taskDescription.toLowerCase().includes(searchQuery.toLowerCase());
@@ -264,6 +320,14 @@ function MaintenanceSchedule() {
 
   return (
     <div className="flex flex-col h-full gap-4 text-text-primary font-sans">
+      <Toast toasts={toasts}/>
+      {confirmModal && (
+        <ConfirmModal
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
 
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center bg-bg-surface p-4 rounded-xl border border-border-color shadow gap-3">

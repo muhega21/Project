@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  Plus, X, Search, ChevronDown, ClipboardList, Trash2, Edit2, Check, Save, CalendarRange, ExternalLink, ArrowRight
+  Plus, X, Search, ClipboardList, Trash2, Check, Save, CalendarRange, ArrowRight, CheckCircle, AlertTriangle
 } from 'lucide-react';
 
 const FREQUENCY_OPTIONS = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semester', 'Annual', 'Trienial', 'Quinquenial'];
 
-// Generate ID Task with P- (Preventive) or C- (Corrective) prefix
 const genTaskId = (type) => {
   const prefix = type === 'Corrective' ? 'C' : 'P';
   return `${prefix}-${Date.now().toString().slice(-5)}`;
@@ -35,6 +34,44 @@ function computeNextDate(startDate, frequency) {
   return d.toISOString().split('T')[0];
 }
 
+/* ── In-App Toast ─────────────────────────────────────────────────── */
+function Toast({ toasts }) {
+  return (
+    <div className="fixed top-5 right-5 z-[200] flex flex-col gap-2 pointer-events-none">
+      {toasts.map(t => (
+        <div key={t.id} className={`flex items-center gap-2 px-4 py-3 rounded-xl border shadow-2xl text-sm font-medium animate-fade-in pointer-events-auto
+          ${t.type === 'success' ? 'bg-green-900/90 border-green-500/40 text-green-200' :
+            t.type === 'error'   ? 'bg-red-900/90 border-red-500/40 text-red-200' :
+            'bg-bg-surface border-border-color text-text-primary'}`}>
+          {t.type === 'success' ? <CheckCircle size={15}/> : <AlertTriangle size={15}/>}
+          {t.message}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Confirm Modal ────────────────────────────────────────────────── */
+function ConfirmModal({ message, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-[#1A2028] border border-border-color rounded-2xl w-full max-w-sm shadow-2xl">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-border-color">
+          <AlertTriangle size={20} className="text-red-400 shrink-0"/>
+          <h3 className="text-base font-bold text-white">Konfirmasi Hapus</h3>
+        </div>
+        <div className="px-6 py-4 text-sm text-text-secondary">{message}</div>
+        <div className="flex gap-3 px-6 py-4 border-t border-border-color justify-end">
+          <button onClick={onCancel} className="px-4 py-2 bg-btn-secondary hover:bg-gray-700 text-white rounded-lg border border-border-color transition-colors text-sm font-medium">Batal</button>
+          <button onClick={onConfirm} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-1.5">
+            <Trash2 size={14}/> Ya, Hapus
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MaintenancePlanning() {
   const [plans, setPlans] = useState(() => {
     const saved = localStorage.getItem('mx_maintenance_plans');
@@ -43,7 +80,6 @@ function MaintenancePlanning() {
   const [assets, setAssets]   = useState([]);
   const [plants, setPlants]   = useState([]);
   const [zones, setZones]     = useState([]);
-  const [workers, setWorkers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId]       = useState(null);
   const [assetSearch, setAssetSearch]           = useState('');
@@ -51,8 +87,10 @@ function MaintenancePlanning() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterArea, setFilterArea] = useState('All');
   const [filterFreq, setFilterFreq] = useState('All');
-  const [selectedPlan, setSelectedPlan] = useState(null); // row-click detail panel
-  const [detailForm, setDetailForm]     = useState(null); // editable copy
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [detailForm, setDetailForm]     = useState(null);
+  const [toasts, setToasts]     = useState([]);
+  const [confirmModal, setConfirmModal] = useState(null); // { message, onConfirm }
 
   const [form, setForm] = useState({
     taskType: 'Preventive',
@@ -61,6 +99,12 @@ function MaintenancePlanning() {
     taskDescription: '', frequency: 'Monthly',
     startDate: new Date().toISOString().split('T')[0], pic: ''
   });
+
+  const addToast = (message, type = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+  };
 
   useEffect(() => {
     localStorage.setItem('mx_maintenance_plans', JSON.stringify(plans));
@@ -89,10 +133,6 @@ function MaintenancePlanning() {
 
     const savedPlants = localStorage.getItem('maintainx_plants');
     if (savedPlants) setPlants(JSON.parse(savedPlants));
-
-    const savedWorkers = localStorage.getItem('mx_workers');
-    if (savedWorkers)
-      setWorkers(JSON.parse(savedWorkers).filter(w => w.profilAkun === 'Teknisi' || w.profilAkun === 'Administrator'));
   }, []);
 
   const filteredAssets = assets.filter(a => {
@@ -103,7 +143,7 @@ function MaintenancePlanning() {
   });
 
   const filteredPlans = plans.filter(p => {
-    const matchSearch = !searchQuery || 
+    const matchSearch = !searchQuery ||
       p.assetName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.taskDescription?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.areaName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -116,12 +156,7 @@ function MaintenancePlanning() {
   const uniqueAreas = Array.from(new Set(plans.map(p => p.areaName))).filter(Boolean).sort();
 
   const handleSelectAsset = (asset) => {
-    setForm(prev => ({
-      ...prev,
-      assetId:   asset.id,
-      assetName: asset.name,
-      // We don't overwrite areaId/plantCode since they are already selected to filter this asset
-    }));
+    setForm(prev => ({ ...prev, assetId: asset.id, assetName: asset.name }));
     setAssetSearch(asset.name);
     setShowAssetDropdown(false);
   };
@@ -134,68 +169,59 @@ function MaintenancePlanning() {
 
   const handleOpenAdd = () => { resetForm(); setShowModal(true); };
 
-  // Row click → open detail panel
   const handleRowClick = (plan) => {
     setSelectedPlan(plan);
     setDetailForm({ ...plan });
   };
 
-  // Update from detail panel
   const handleDetailUpdate = () => {
-    if (!detailForm.taskDescription.trim()) return alert('Task Description tidak boleh kosong!');
+    if (!detailForm.taskDescription.trim()) {
+      addToast('Task Description tidak boleh kosong!', 'error');
+      return;
+    }
     const nextDate = computeNextDate(detailForm.startDate, detailForm.frequency);
     setPlans(prev => prev.map(p => p.id === detailForm.id ? { ...detailForm, nextDate } : p));
     setSelectedPlan({ ...detailForm, nextDate });
-    alert('Task berhasil diperbarui!');
+    addToast('Task berhasil diperbarui!', 'success');
   };
 
-  // Delete from detail panel
   const handleDetailDelete = () => {
-    if (!confirm(`Hapus task "${detailForm.taskDescription}" ?`)) return;
-    setPlans(prev => prev.filter(p => p.id !== detailForm.id));
-    setSelectedPlan(null);
-    setDetailForm(null);
-  };
-
-  const handleDelete = (id) => {
-    if (confirm('Hapus rencana maintenance ini?')) {
-      setPlans(prev => prev.filter(p => p.id !== id));
-      if (selectedPlan?.id === id) { setSelectedPlan(null); setDetailForm(null); }
-    }
+    setConfirmModal({
+      message: `Hapus task "${detailForm.taskDescription}" untuk ${detailForm.assetName}? Task ini juga akan hilang dari Jadwal Maintenance.`,
+      onConfirm: () => {
+        setPlans(prev => prev.filter(p => p.id !== detailForm.id));
+        setSelectedPlan(null);
+        setDetailForm(null);
+        setConfirmModal(null);
+        addToast('Task berhasil dihapus.', 'success');
+      }
+    });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.assetId) return alert('Pilih asset terlebih dahulu!');
-    if (!form.taskDescription) return alert('Task Description wajib diisi!');
+    if (!form.assetId) { addToast('Pilih asset terlebih dahulu!', 'error'); return; }
+    if (!form.taskDescription) { addToast('Task Description wajib diisi!', 'error'); return; }
 
     const nextDate = computeNextDate(form.startDate, form.frequency);
 
     if (editId) {
       setPlans(prev => prev.map(p => p.id === editId ? { ...p, ...form, nextDate } : p));
     } else {
-      const newPlan = {
-        id: genTaskId(form.taskType),
-        ...form,
-        nextDate,
-        status: 'Active'
-      };
+      const newPlan = { id: genTaskId(form.taskType), ...form, nextDate, status: 'Active' };
       setPlans(prev => [newPlan, ...prev]);
     }
     setShowModal(false);
     resetForm();
+    addToast('Task Description berhasil ditambahkan!', 'success');
   };
 
   const getFrequencyBadge = (freq) => {
     const colors = {
-      'Daily':       'bg-red-500/20 text-red-400',
-      'Weekly':      'bg-orange-500/20 text-orange-400',
-      'Monthly':     'bg-blue-500/20 text-blue-400',
-      'Quarterly':   'bg-purple-500/20 text-purple-400',
-      'Semester':    'bg-indigo-500/20 text-indigo-400',
-      'Annual':      'bg-green-500/20 text-green-400',
-      'Trienial':    'bg-teal-500/20 text-teal-400',
-      'Quinquenial': 'bg-cyan-500/20 text-cyan-400',
+      'Daily':'bg-red-500/20 text-red-400','Weekly':'bg-orange-500/20 text-orange-400',
+      'Monthly':'bg-blue-500/20 text-blue-400','Quarterly':'bg-purple-500/20 text-purple-400',
+      'Semester':'bg-indigo-500/20 text-indigo-400','Annual':'bg-green-500/20 text-green-400',
+      'Trienial':'bg-teal-500/20 text-teal-400','Quinquenial':'bg-cyan-500/20 text-cyan-400',
     };
     return <span className={`px-2 py-0.5 rounded text-xs font-semibold ${colors[freq] || 'bg-gray-500/20 text-gray-400'}`}>{freq}</span>;
   };
@@ -210,6 +236,14 @@ function MaintenancePlanning() {
 
   return (
     <div className="flex flex-col h-full gap-4 text-text-primary font-sans">
+      <Toast toasts={toasts}/>
+      {confirmModal && (
+        <ConfirmModal
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
 
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-bg-surface p-4 rounded-xl border border-border-color shadow gap-3">
@@ -217,18 +251,18 @@ function MaintenancePlanning() {
           <h2 className="text-xl font-bold">Perencanaan Maintenance</h2>
           <p className="text-sm text-text-secondary mt-0.5">Kelola rencana pemeliharaan rutin untuk setiap Asset &amp; Equipment</p>
         </div>
-        <div className="flex gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <select value={filterArea} onChange={e => setFilterArea(e.target.value)}
-            className="bg-bg-dark border border-border-color rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-[#FF7043] appearance-none max-w-[150px] truncate hidden md:block">
+            className="bg-bg-dark border border-border-color rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-[#FF7043] appearance-none">
             <option value="All">Semua Lokasi</option>
             {uniqueAreas.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
           <select value={filterFreq} onChange={e => setFilterFreq(e.target.value)}
-            className="bg-bg-dark border border-border-color rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-[#FF7043] appearance-none max-w-[150px] truncate hidden md:block">
+            className="bg-bg-dark border border-border-color rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-[#FF7043] appearance-none">
             <option value="All">Semua Interval</option>
             {FREQUENCY_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
-          <div className="relative flex-1 sm:w-64">
+          <div className="relative flex-1 min-w-[160px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
             <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Cari aset, task, atau ID..."
@@ -348,7 +382,6 @@ function MaintenancePlanning() {
         {/* Detail / Edit Panel */}
         {selectedPlan && detailForm && (
           <div className="bg-bg-surface border border-border-color rounded-xl shadow-2xl flex flex-col overflow-hidden" style={{ width: 340, flexShrink: 0 }}>
-            {/* Panel Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-border-color bg-black/20">
               <div>
                 <div className="flex items-center gap-2">
@@ -362,7 +395,6 @@ function MaintenancePlanning() {
               </button>
             </div>
 
-            {/* Editable Fields */}
             <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
 
               <div>
@@ -426,21 +458,18 @@ function MaintenancePlanning() {
                   className="w-full bg-bg-dark border border-border-color rounded-lg p-2 text-sm focus:outline-none focus:border-[#FF7043]" />
               </div>
 
-              {/* Next date preview */}
               {detailForm.startDate && detailForm.frequency && (
                 <div className="text-xs bg-blue-500/10 border border-blue-500/30 rounded-lg p-2.5 text-blue-300">
                   📅 Next Date: <strong>{computeNextDate(detailForm.startDate, detailForm.frequency)}</strong>
                 </div>
               )}
 
-              {/* Integration note */}
               <div className="text-xs bg-green-500/10 border border-green-500/30 rounded-lg p-2.5 text-green-300 flex items-center gap-2">
                 <CalendarRange size={13} className="shrink-0"/>
                 <span>Task ini aktif di <strong>Jadwal Maintenance</strong> sesuai frekuensi yang diatur.</span>
               </div>
             </div>
 
-            {/* Panel Footer Actions */}
             <div className="px-5 py-4 border-t border-border-color flex gap-2">
               <button onClick={handleDetailUpdate}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gradient-to-r from-accent to-accent-secondary text-white font-semibold text-sm hover:from-[#FF8A65] hover:to-[#FF5722] shadow transition-all active:scale-95">
@@ -455,7 +484,7 @@ function MaintenancePlanning() {
         )}
       </div>
 
-      {/* Add/Edit Modal */}
+      {/* Add Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-bg-surface border border-border-color rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
@@ -466,7 +495,6 @@ function MaintenancePlanning() {
 
             <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
 
-              {/* Plant / Zone / Asset Selection */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-1.5">Kode Area/Lokasi (Plant) <span className="text-red-500">*</span></label>
@@ -496,7 +524,6 @@ function MaintenancePlanning() {
                 </div>
               </div>
 
-              {/* Asset Search */}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">Pilih Asset / Equipment <span className="text-red-500">*</span></label>
                 <div className="relative">
@@ -532,7 +559,6 @@ function MaintenancePlanning() {
                 )}
               </div>
 
-              {/* Task Description */}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">Task Description <span className="text-red-500">*</span></label>
                 <textarea value={form.taskDescription}

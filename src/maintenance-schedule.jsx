@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { Calendar, AlertTriangle, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, X, ChevronDown, Plus, HelpCircle, Trash2, ClipboardList } from "lucide-react";
+import { Calendar, AlertTriangle, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, X, ChevronDown, Plus, HelpCircle, Trash2, ClipboardList, CalendarDays } from "lucide-react";
 import { loadPlans, savePlans, loadRecords, normalizePic, updateRecord } from "./maintenance-store.js";
 
 const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -282,18 +282,22 @@ function MaintenanceSchedule() {
                   <th className="px-4 py-3 font-medium">Nama Asset</th>
                   <th className="px-4 py-3 font-medium">Task Description</th>
                   <th className="px-4 py-3 font-medium">Frequency</th>
+                  <th className="px-4 py-3 font-medium">Tgl. Jadwal</th>
                   <th className="px-4 py-3 font-medium">PIC (Multi)</th>
                   <th className="px-4 py-3 font-medium">Status Task</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-color">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan="7" className="px-6 py-12 text-center text-text-secondary">Tidak ada jadwal yang ditemukan.</td></tr>
+                  <tr><td colSpan="8" className="px-6 py-12 text-center text-text-secondary">Tidak ada jadwal yang ditemukan.</td></tr>
                 ) : filtered.map(plan => {
                   const targetDateStr = getTargetDateStr();
                   const ts = getTaskStatus(plan.id, targetDateStr);
                   const overdue = isOverdue(targetDateStr, ts);
                   const pic = getTaskPic(plan, targetDateStr);
+                  const displayDate = targetDateStr
+                    ? new Date(targetDateStr).toLocaleDateString("id-ID", { weekday:"short", day:"2-digit", month:"short", year:"numeric" })
+                    : "-";
                   return (
                     <tr key={plan.id} className={`hover:bg-btn-secondary/50 transition-colors ${overdue ? "bg-red-500/5" : ""}`}>
                       <td className="px-4 py-3 text-text-secondary font-mono text-xs">{plan.plantCode || plan.areaId || "-"}</td>
@@ -301,6 +305,15 @@ function MaintenanceSchedule() {
                       <td className="px-4 py-3 font-medium text-blue-400">{plan.assetName}</td>
                       <td className="px-4 py-3 text-text-secondary max-w-[200px]" style={{whiteSpace:"normal"}}>{plan.taskDescription}</td>
                       <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-xs font-semibold ${FREQ_COLORS[plan.frequency]||"bg-gray-500/20 text-gray-400"}`}>{plan.frequency}</span></td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <CalendarDays size={13} className={`shrink-0 ${overdue ? "text-red-400" : "text-text-secondary"}`}/>
+                          <span className={`text-xs font-mono ${overdue ? "text-red-400 font-semibold" : "text-text-secondary"}`}>
+                            {displayDate}
+                          </span>
+                          {overdue && <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] rounded border border-red-500/30 ml-1">Overdue</span>}
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <PicTagInput value={pic} onChange={(v) => updatePic(plan.id, v)} workers={workers} disabled={ts === "Done"}/>
                       </td>
